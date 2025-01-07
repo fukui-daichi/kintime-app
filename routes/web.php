@@ -4,19 +4,32 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
+// トップページ
 Route::get('/', function () {
-    // ログインしている場合はダッシュボードを表示
     if (Auth::check()) {
-        return view('dashboard');
+        // ユーザー種別によってリダイレクト先を変更
+        return Auth::user()->user_type === 'admin'
+            ? redirect()->route('admin.index')
+            : redirect()->route('user.index');
     }
-    // ログインしていない場合はログインページにリダイレクト
     return redirect('login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// 管理者用ルート
+Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', function () {
+        return view('admin.index');
+    })->name('admin.index');
+});
 
+// 一般ユーザー用ルート
+Route::prefix('user')->middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', function () {
+        return view('user.index');
+    })->name('user.index');
+});
+
+// プロフィール関連（既存）
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
