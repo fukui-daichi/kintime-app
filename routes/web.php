@@ -7,29 +7,16 @@ use Illuminate\Support\Facades\Auth;
 // トップページ
 Route::get('/', function () {
     if (Auth::check()) {
-        // ユーザー種別によってリダイレクト先を変更
+        // ログインしている場合、ユーザー種別によってビューを分岐
         return Auth::user()->user_type === 'admin'
-            ? redirect()->route('admin.index')
-            : redirect()->route('user.index');
+            ? view('admin.index')
+            : view('user.index');
     }
+    // 未ログインの場合はログインページへ
     return redirect('login');
 });
 
-// 管理者用ルート
-Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
-    Route::get('/', function () {
-        return view('admin.index');
-    })->name('admin.index');
-});
-
-// 一般ユーザー用ルート
-Route::prefix('user')->middleware(['auth', 'verified'])->group(function () {
-    Route::get('/', function () {
-        return view('user.index');
-    })->name('user.index');
-});
-
-// プロフィール関連（既存）
+// プロフィール関連
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
