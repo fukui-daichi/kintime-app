@@ -31,6 +31,12 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    // 勤怠データとのリレーションを追加
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     // フルネーム取得用のアクセサ
     public function getFullNameAttribute()
     {

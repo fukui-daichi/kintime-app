@@ -20,6 +20,7 @@ class UsersTableSeeder extends Seeder
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
             'user_type' => 'admin',
+            'hire_date' => '2024-01-01',
         ]);
 
         // 一般ユーザーのテストアカウント
