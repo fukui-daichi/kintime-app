@@ -2,18 +2,25 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ProfileController;
+use App\Models\Attendance;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+
 
 // トップページ
 Route::get('/', function () {
     if (Auth::check()) {
-        // ログインしている場合、ユーザー種別によってビューを分岐
-        return Auth::user()->user_type === 'admin'
-            ? view('admin.index')
-            : view('user.index');
+        if (Auth::user()->user_type === 'admin') {
+            return view('admin.index');
+        } else {
+            $today = Carbon::now();
+            $attendance = Attendance::where('user_id', Auth::id())
+                ->where('date', $today->toDateString())
+                ->first();
+            return view('user.index', compact('attendance'));
+        }
     }
-    // 未ログインの場合はログインページへ
     return redirect('login');
 });
 

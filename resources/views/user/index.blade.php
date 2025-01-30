@@ -1,15 +1,83 @@
 <x-user-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">一般ユーザー</h2>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">勤怠管理</h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    {{ __("You're logged in!") }}
+                    {{-- フラッシュメッセージ --}}
+                    @if (session('success'))
+                        <div class="mb-4 p-4 text-sm text-green-700 bg-green-100 rounded-lg">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    <div class="text-center">
+                        {{-- 現在日時の表示 --}}
+                        <div class="text-2xl mb-4">{{ now()->format('Y年m月d日') }}</div>
+                        <div class="text-xl mb-8" id="currentTime">
+                            {{ now()->format('H:i:s') }}
+                        </div>
+
+                        {{-- 打刻ボタン --}}
+                        <div class="space-x-4">
+                            <form action="{{ route('attendance.clockIn') }}" method="POST" class="inline">
+                                @csrf
+                                <button type="submit"
+                                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded
+                                        {{ ($attendance && $attendance->status === 'working') ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                    {{ ($attendance && $attendance->status === 'working') ? 'disabled' : '' }}>
+                                    出勤
+                                </button>
+                            </form>
+
+                            <form action="{{ route('attendance.clockOut') }}" method="POST" class="inline">
+                                @csrf
+                                <button type="submit"
+                                    class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded
+                                        {{ (!$attendance || $attendance->status === 'left') ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                    {{ (!$attendance || $attendance->status === 'left') ? 'disabled' : '' }}>
+                                    退勤
+                                </button>
+                            </form>
+                        </div>
+
+                        {{-- 本日の勤怠状況 --}}
+                        @if ($attendance)
+                            <div class="mt-8 text-left max-w-xl mx-auto">
+                                <h3 class="text-lg font-semibold mb-4">本日の勤怠状況</h3>
+                                <div class="space-y-2">
+                                    <p>出勤時刻：{{ $attendance->clock_in ? Carbon\Carbon::parse($attendance->clock_in)->format('H:i:s') : '未打刻' }}</p>
+                                    <p>退勤時刻：{{ $attendance->clock_out ? Carbon\Carbon::parse($attendance->clock_out)->format('H:i:s') : '未打刻' }}</p>
+                                    @if ($attendance->actual_work_time)
+                                        <p>実働時間：{{ floor($attendance->actual_work_time / 60) }}時間{{ $attendance->actual_work_time % 60 }}分</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- 現在時刻を更新するためのJavaScript --}}
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ja-JP');
+            document.getElementById('currentTime').textContent = timeString;
+        }
+
+        // 1秒ごとに時刻を更新
+        setInterval(updateTime, 1000);
+    </script>
 </x-user-layout>
