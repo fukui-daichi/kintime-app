@@ -4,6 +4,7 @@ namespace App\Services\Attendance;
 
 use App\Models\Attendance;
 use Carbon\Carbon;
+use App\Helpers\TimeFormatter;
 
 class ClockService
 {
@@ -97,8 +98,8 @@ class ClockService
         $attendance->update([
             'clock_out' => $clockOut->format('H:i:s'),
             'actual_work_time' => (int)$actualWorkMinutes,
-            'overtime' => $overtime > 0 ? round($overtime / 60, 2) : null,
-            'night_work_time' => $nightWorkMinutes > 0 ? round($nightWorkMinutes / 60, 2) : null,
+            'overtime' => $overtime > 0 ? (int)$overtime : null,
+            'night_work_time' => $nightWorkMinutes > 0 ? (int)$nightWorkMinutes : null,
             'status' => 'left',
         ]);
 
@@ -208,9 +209,6 @@ class ClockService
             return [];
         }
 
-        $hours = floor(abs($attendance->actual_work_time) / 60);
-        $minutes = abs($attendance->actual_work_time) % 60;
-
         return [
             'clockInTime' => $attendance->clock_in
                 ? Carbon::parse($attendance->clock_in)->format('H:i')
@@ -218,8 +216,9 @@ class ClockService
             'clockOutTime' => $attendance->clock_out
                 ? Carbon::parse($attendance->clock_out)->format('H:i')
                 : '未打刻',
-            'workHours' => $attendance->actual_work_time ? $hours : null,
-            'workMinutes' => $attendance->actual_work_time ? $minutes : null,
+            'workTime' => TimeFormatter::minutesToTime($attendance->actual_work_time),
+            'overtime' => TimeFormatter::minutesToTime($attendance->overtime),
+            'nightWorkTime' => TimeFormatter::minutesToTime($attendance->night_work_time),
         ];
     }
 }

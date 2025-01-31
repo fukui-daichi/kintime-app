@@ -82,25 +82,13 @@
                                                 {{ $data['clock_out'] ?? '-' }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                @if ($data['work_hours'] !== null)
-                                                    {{ $data['work_hours'] }}時間{{ $data['work_minutes'] }}分
-                                                @else
-                                                    -
-                                                @endif
+                                                {{ $data['work_time'] ?? '-' }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                @if ($data['overtime_hours'] !== null)
-                                                    {{ $data['overtime_hours'] }}時間{{ $data['overtime_minutes'] }}分
-                                                @else
-                                                    -
-                                                @endif
+                                                {{ $data['overtime'] ?? '-' }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                @if ($data['night_work_hours'] !== null)
-                                                    {{ $data['night_work_hours'] }}時間{{ $data['night_work_minutes'] }}分
-                                                @else
-                                                    -
-                                                @endif
+                                                {{ $data['night_work_time'] ?? '-' }}
                                             </td>
                                         </tr>
                                     @endforeach

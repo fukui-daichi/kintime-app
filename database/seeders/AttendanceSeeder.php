@@ -60,9 +60,9 @@ class AttendanceSeeder extends Seeder
                 $workMinutes = $clockIn->diffInMinutes($clockOut) - 60; // 休憩時間1時間を引く
 
                 // 残業時間の計算（分単位）
-                $overtime = max(0, $workMinutes - self::REGULAR_WORK_MINUTES);
+                $overtimeMinutes = max(0, $workMinutes - self::REGULAR_WORK_MINUTES);
 
-                // 深夜時間の計算
+                // 深夜時間の計算（分単位）
                 $nightWorkMinutes = $this->calculateNightWorkMinutes($clockIn, $clockOut);
 
                 Attendance::create([
@@ -72,8 +72,8 @@ class AttendanceSeeder extends Seeder
                     'clock_out' => $clockOut->format('H:i:s'),
                     'break_time' => 60,
                     'actual_work_time' => $workMinutes,
-                    'overtime' => $overtime > 0 ? round($overtime / 60, 2) : null,
-                    'night_work_time' => $nightWorkMinutes > 0 ? round($nightWorkMinutes / 60, 2) : null,
+                    'overtime' => $overtimeMinutes,        // 分単位で保存
+                    'night_work_time' => $nightWorkMinutes, // 分単位で保存
                     'status' => 'left',
                     'note' => null
                 ]);
@@ -96,9 +96,9 @@ class AttendanceSeeder extends Seeder
      *
      * @param Carbon $clockIn 出勤時刻
      * @param Carbon $clockOut 退勤時刻
-     * @return float 深夜時間（分）
+     * @return int 深夜時間（分）
      */
-    private function calculateNightWorkMinutes(Carbon $clockIn, Carbon $clockOut): float
+    private function calculateNightWorkMinutes(Carbon $clockIn, Carbon $clockOut): int
     {
         $nightWorkMinutes = 0;
         $currentTime = $clockIn->copy();
