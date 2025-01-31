@@ -94,7 +94,7 @@ class AttendanceService
         $clockOut = Carbon::now();
 
         // 実労働時間を計算（分単位）
-        $workMinutes = -1 * $clockIn->floatDiffInMinutes($clockOut);
+        $workMinutes = $clockIn->floatDiffInMinutes($clockOut);
 
         // 休憩時間を引く
         $actualWorkMinutes = $workMinutes - $attendance->break_time;
