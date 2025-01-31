@@ -31,6 +31,10 @@ class AttendanceDataFormatter
                 'clock_out' => $attendance?->clock_out ? Carbon::parse($attendance->clock_out)->format('H:i') : null,
                 'work_hours' => $attendance?->actual_work_time ? floor($attendance->actual_work_time / 60) : null,
                 'work_minutes' => $attendance?->actual_work_time ? $attendance->actual_work_time % 60 : null,
+                'overtime_hours' => $attendance?->overtime ? floor($attendance->overtime * 60 / 60) : null,
+                'overtime_minutes' => $attendance?->overtime ? ($attendance->overtime * 60) % 60 : null,
+                'night_work_hours' => $attendance?->night_work_time ? floor($attendance->night_work_time * 60 / 60) : null,
+                'night_work_minutes' => $attendance?->night_work_time ? ($attendance->night_work_time * 60) % 60 : null,
             ]);
 
             $currentDate->addDay();
