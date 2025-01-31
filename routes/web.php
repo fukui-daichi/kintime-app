@@ -2,10 +2,8 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ProfileController;
-use App\Models\Attendance;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 
 // トップページ

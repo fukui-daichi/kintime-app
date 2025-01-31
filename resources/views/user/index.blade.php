@@ -33,8 +33,8 @@
                                 @csrf
                                 <button type="submit"
                                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded
-                                        {{ ($attendance && $attendance->status === 'working') ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                    {{ ($attendance && $attendance->status === 'working') ? 'disabled' : '' }}>
+                                        {{ !$canClockIn ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                    {{ !$canClockIn ? 'disabled' : '' }}>
                                     出勤
                                 </button>
                             </form>
@@ -43,8 +43,8 @@
                                 @csrf
                                 <button type="submit"
                                     class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded
-                                        {{ (!$attendance || $attendance->status === 'left') ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                    {{ (!$attendance || $attendance->status === 'left') ? 'disabled' : '' }}>
+                                        {{ !$canClockOut ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                    {{ !$canClockOut ? 'disabled' : '' }}>
                                     退勤
                                 </button>
                             </form>
@@ -55,10 +55,10 @@
                             <div class="mt-8 text-left max-w-xl mx-auto">
                                 <h3 class="text-lg font-semibold mb-4">本日の勤怠状況</h3>
                                 <div class="space-y-2">
-                                    <p>出勤時刻：{{ $attendance->clock_in ? Carbon\Carbon::parse($attendance->clock_in)->format('H:i:s') : '未打刻' }}</p>
-                                    <p>退勤時刻：{{ $attendance->clock_out ? Carbon\Carbon::parse($attendance->clock_out)->format('H:i:s') : '未打刻' }}</p>
-                                    @if ($attendance->actual_work_time)
-                                        <p>実働時間：{{ floor($attendance->actual_work_time / 60) }}時間{{ $attendance->actual_work_time % 60 }}分</p>
+                                    <p>出勤時刻：{{ $attendanceData['clockInTime'] }}</p>
+                                    <p>退勤時刻：{{ $attendanceData['clockOutTime'] }}</p>
+                                    @if ($attendanceData['workHours'] !== null)
+                                        <p>実働時間：{{ $attendanceData['workHours'] }}時間{{ $attendanceData['workMinutes'] }}分</p>
                                     @endif
                                 </div>
                             </div>

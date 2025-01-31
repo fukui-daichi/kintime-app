@@ -19,11 +19,8 @@ class AttendanceController extends Controller
     // 勤怠画面表示用メソッド
     public function index()
     {
-        // 現在認証されているユーザーの今日の勤怠データを取得
-        $attendance = $this->attendanceService->getTodayAttendance(Auth::id());
-
-        // user.indexビューに勤怠データを渡して表示
-        return view('user.index', compact('attendance'));
+        $attendanceData = $this->attendanceService->getAttendanceData(Auth::id());
+        return view('user.index', $attendanceData);
     }
 
     // 出勤打刻処理メソッド
