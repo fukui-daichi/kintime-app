@@ -17,25 +17,23 @@ class MonthlyAttendanceService
 
     /**
      * 月別勤怠一覧画面用のデータを取得
-     *
-     * @param int $userId
-     * @param string|null $year
-     * @param string|null $month
-     * @return array
      */
     public function getData(int $userId, ?string $year = null, ?string $month = null): array
     {
         $targetDate = $this->createTargetDate($year, $month);
+        $currentDate = now()->startOfMonth();
 
         return [
             'attendances' => $this->getMonthlyAttendance($userId, $targetDate),
             'targetDate' => $targetDate,
             'previousMonth' => $targetDate->copy()->subMonth(),
             'nextMonth' => $targetDate->copy()->addMonth(),
-            'years' => $this->getYearOptions($targetDate),
-            'months' => range(1, 12),
+            'showNextMonth' => $targetDate->copy()->addMonth()->lte($currentDate),
+            'years' => $this->getYearOptions(),
+            'months' => $this->getMonthOptions($targetDate->year),
         ];
     }
+
 
     /**
      * 対象年月のCarbonインスタンスを作成
@@ -75,15 +73,33 @@ class MonthlyAttendanceService
 
     /**
      * プルダウン用の年の選択肢を生成
-     *
-     * @param Carbon $targetDate
-     * @return array
      */
-    private function getYearOptions(Carbon $targetDate): array
+    private function getYearOptions(): array
     {
-        return range(
-            $targetDate->copy()->subYears(2)->year,
-            $targetDate->copy()->addYears(2)->year
-        );
+        $currentYear = now()->year;
+        return collect(range($currentYear - 2, $currentYear))
+            ->map(fn($year) => [
+                'value' => $year,
+                'label' => $year . '年',
+                'disabled' => $year > $currentYear
+            ])
+            ->toArray();
+    }
+
+    /**
+     * プルダウン用の月の選択肢を生成
+     */
+    private function getMonthOptions(int $targetYear): array
+    {
+        $currentYear = now()->year;
+        $currentMonth = now()->month;
+
+        return collect(range(1, 12))
+            ->map(fn($month) => [
+                'value' => $month,
+                'label' => $month . '月',
+                'disabled' => $targetYear === $currentYear && $month > $currentMonth
+            ])
+            ->toArray();
     }
 }

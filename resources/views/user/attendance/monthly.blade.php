@@ -11,33 +11,41 @@
                     <div class="mb-6 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                         {{-- 前月リンク --}}
                         <a href="{{ route('attendance.monthly', ['year' => $previousMonth->year, 'month' => $previousMonth->month]) }}"
-                           class="text-blue-500 hover:text-blue-700">
+                            class="text-blue-500 hover:text-blue-700">
                             ← {{ $previousMonth->format('Y年n月') }}
                         </a>
 
                         {{-- 年月選択フォーム --}}
                         <form method="GET" action="{{ route('attendance.monthly') }}" class="flex items-center space-x-2">
                             <select name="year" class="rounded-md border-gray-300" onchange="this.form.submit()">
-                                @foreach ($years as $y)
-                                    <option value="{{ $y }}" {{ $y == $targetDate->year ? 'selected' : '' }}>
-                                        {{ $y }}年
+                                @foreach ($years as $year)
+                                    <option value="{{ $year['value'] }}"
+                                        {{ $year['value'] == $targetDate->year ? 'selected' : '' }}
+                                        {{ $year['disabled'] ? 'disabled' : '' }}>
+                                        {{ $year['label'] }}
                                     </option>
                                 @endforeach
                             </select>
                             <select name="month" class="rounded-md border-gray-300" onchange="this.form.submit()">
-                                @foreach ($months as $m)
-                                    <option value="{{ $m }}" {{ $m == $targetDate->month ? 'selected' : '' }}>
-                                        {{ $m }}月
+                                @foreach ($months as $month)
+                                    <option value="{{ $month['value'] }}"
+                                        {{ $month['value'] == $targetDate->month ? 'selected' : '' }}
+                                        {{ $month['disabled'] ? 'disabled' : '' }}>
+                                        {{ $month['label'] }}
                                     </option>
                                 @endforeach
                             </select>
                         </form>
 
-                        {{-- 翌月リンク --}}
-                        <a href="{{ route('attendance.monthly', ['year' => $nextMonth->year, 'month' => $nextMonth->month]) }}"
-                           class="text-blue-500 hover:text-blue-700">
-                            {{ $nextMonth->format('Y年n月') }} →
-                        </a>
+                        {{-- 翌月リンク（現在月より未来は非表示） --}}
+                        <div class="w-24 text-right">
+                            @if ($showNextMonth)
+                                <a href="{{ route('attendance.monthly', ['year' => $nextMonth->year, 'month' => $nextMonth->month]) }}"
+                                    class="text-blue-500 hover:text-blue-700">
+                                    {{ $nextMonth->format('Y年n月') }} →
+                                </a>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- 勤怠一覧テーブル --}}
