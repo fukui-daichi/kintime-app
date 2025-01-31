@@ -89,14 +89,20 @@ class AttendanceService
             ];
         }
 
-        // 実労働時間の計算（休憩時間を考慮）
+        // 時刻を時間オブジェクトに変換
         $clockIn = Carbon::parse($attendance->clock_in);
-        $workMinutes = $now->diffInMinutes($clockIn) - $attendance->break_time;
+        $clockOut = Carbon::now();
+
+        // 実労働時間を計算（分単位）
+        $workMinutes = -1 * $clockIn->floatDiffInMinutes($clockOut);
+
+        // 休憩時間を引く
+        $actualWorkMinutes = $workMinutes - $attendance->break_time;
 
         // 勤怠データの更新
         $attendance->update([
-            'clock_out' => $now->toTimeString(),
-            'actual_work_time' => $workMinutes,
+            'clock_out' => $clockOut->format('H:i:s'),
+            'actual_work_time' => (int)$actualWorkMinutes,
             'status' => 'left',
         ]);
 
@@ -167,19 +173,19 @@ class AttendanceService
             return [];
         }
 
+        // 実労働時間を時間と分に分解
+        $hours = floor(abs($attendance->actual_work_time) / 60);
+        $minutes = abs($attendance->actual_work_time) % 60;
+
         return [
             'clockInTime' => $attendance->clock_in
-                ? Carbon::parse($attendance->clock_in)->format('H:i:s')
+                ? Carbon::parse($attendance->clock_in)->format('H:i')
                 : '未打刻',
             'clockOutTime' => $attendance->clock_out
-                ? Carbon::parse($attendance->clock_out)->format('H:i:s')
+                ? Carbon::parse($attendance->clock_out)->format('H:i')
                 : '未打刻',
-            'workHours' => $attendance->actual_work_time
-                ? floor($attendance->actual_work_time / 60)
-                : null,
-            'workMinutes' => $attendance->actual_work_time
-                ? $attendance->actual_work_time % 60
-                : null,
+            'workHours' => $attendance->actual_work_time ? $hours : null,
+            'workMinutes' => $attendance->actual_work_time ? $minutes : null,
         ];
     }
 }

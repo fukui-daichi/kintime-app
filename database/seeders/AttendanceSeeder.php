@@ -35,13 +35,17 @@ class AttendanceSeeder extends Seeder
                 $clockOut = Carbon::create($date->year, $date->month, $date->day, 17)
                     ->addMinutes(rand(0, 120));
 
+                // 実働時間の計算（分単位）
+                // 出退勤時間の差分から休憩時間を引く
+                $workMinutes = $clockIn->diffInMinutes($clockOut) - 60;
+
                 Attendance::create([
                     'user_id' => $testUser->id,
                     'date' => $date->format('Y-m-d'),
                     'clock_in' => $clockIn->format('H:i:s'),
                     'clock_out' => $clockOut->format('H:i:s'),
                     'break_time' => 60,
-                    'actual_work_time' => $clockOut->diffInMinutes($clockIn) - 60,
+                    'actual_work_time' => $workMinutes,
                     'status' => 'left',
                     'note' => null
                 ]);
