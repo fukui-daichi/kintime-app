@@ -20,8 +20,8 @@ Route::middleware('auth')->group(function () {
         ->name('profile.destroy');
 
     // 勤怠関連
-    Route::get('/attendance', [AttendanceController::class, 'index'])
-        ->name('attendance.index');
+    Route::get('/attendance', [AttendanceController::class, 'monthly'])
+        ->name('attendance.monthly');  // 月別一覧画面
     Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn'])
         ->name('attendance.clockIn');
     Route::post('/attendance/clock-out', [AttendanceController::class, 'clockOut'])

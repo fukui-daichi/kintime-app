@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\AttendanceService;
+use App\Services\Attendance\AttendanceService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
@@ -19,7 +20,7 @@ class AttendanceController extends Controller
     // 勤怠画面表示用メソッド
     public function index()
     {
-        $attendanceData = $this->attendanceService->getAttendanceData(Auth::id());
+        $attendanceData = $this->attendanceService->getDailyAttendanceData(Auth::id());
         return view('user.index', $attendanceData);
     }
 
@@ -46,6 +47,21 @@ class AttendanceController extends Controller
         return back()->with(
             $result['success'] ? 'success' : 'error',
             $result['message']
+        );
+    }
+
+    /**
+     * 月別勤怠一覧画面の表示
+     */
+    public function monthly(Request $request)
+    {
+        // サービスから必要なデータを取得してビューに渡すだけにする
+        return view('user.attendance.monthly',
+            $this->attendanceService->getMonthlyAttendanceData(
+                Auth::id(),
+                $request->query('year'),
+                $request->query('month')
+            )
         );
     }
 }
