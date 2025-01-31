@@ -2,72 +2,53 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Attendance;
-use Carbon\Carbon;
+use App\Services\AttendanceService;
 use Illuminate\Support\Facades\Auth;
 
 class AttendanceController extends Controller
 {
+    // サービスクラスのプロパティを定義
+    private $attendanceService;
+
+    public function __construct(AttendanceService $attendanceService)
+    {
+        // AttendanceServiceのインスタンスを受け取り、プロパティに保存
+        $this->attendanceService = $attendanceService;
+    }
+
+    // 勤怠画面表示用メソッド
     public function index()
     {
-        $user = Auth::user();
-        $today = Carbon::now();
-        $attendance = Attendance::where('user_id', $user->id)
-            ->where('date', $today->toDateString())
-            ->first();
+        // 現在認証されているユーザーの今日の勤怠データを取得
+        $attendance = $this->attendanceService->getTodayAttendance(Auth::id());
 
-        return view('attendance.index', compact('attendance'));
+        // user.indexビューに勤怠データを渡して表示
+        return view('user.index', compact('attendance'));
     }
 
+    // 出勤打刻処理メソッド
     public function clockIn()
     {
-        $user = Auth::user();
-        $now = Carbon::now();
+        // サービスクラスの出勤処理を実行
+        $result = $this->attendanceService->clockIn(Auth::id());
 
-        // 同日の打刻がないかチェック
-        $exists = Attendance::where('user_id', $user->id)
-            ->where('date', $now->toDateString())
-            ->exists();
-
-        if ($exists) {
-            return back()->with('error', '本日はすでに出勤打刻されています。');
-        }
-
-        Attendance::create([
-            'user_id' => $user->id,
-            'date' => $now->toDateString(),
-            'clock_in' => $now->toTimeString(),
-            'status' => 'working',
-        ]);
-
-        return back()->with('success', '出勤を記録しました。');
+        // 処理結果に応じてフラッシュメッセージを設定し、前のページに戻る
+        return back()->with(
+            $result['success'] ? 'success' : 'error', // 成功/失敗に応じてメッセージの種類を切り替え
+            $result['message'] // メッセージ内容
+        );
     }
 
+    // 退勤打刻処理メソッド
     public function clockOut()
     {
-        $user = Auth::user();
-        $now = Carbon::now();
+        // サービスクラスの退勤処理を実行
+        $result = $this->attendanceService->clockOut(Auth::id());
 
-        $attendance = Attendance::where('user_id', $user->id)
-            ->where('date', $now->toDateString())
-            ->where('status', 'working')
-            ->first();
-
-        if (!$attendance) {
-            return back()->with('error', '本日の出勤記録が見つかりません。');
-        }
-
-        // 実労働時間の計算
-        $clockIn = Carbon::parse($attendance->clock_in);
-        $workMinutes = $now->diffInMinutes($clockIn) - $attendance->break_time;
-
-        $attendance->update([
-            'clock_out' => $now->toTimeString(),
-            'actual_work_time' => $workMinutes,
-            'status' => 'left',
-        ]);
-
-        return back()->with('success', '退勤を記録しました。');
+        // 処理結果に応じてフラッシュメッセージを設定し、前のページに戻る
+        return back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 }

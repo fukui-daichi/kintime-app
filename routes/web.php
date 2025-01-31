@@ -11,15 +11,9 @@ use Carbon\Carbon;
 // トップページ
 Route::get('/', function () {
     if (Auth::check()) {
-        if (Auth::user()->user_type === 'admin') {
-            return view('admin.index');
-        } else {
-            $today = Carbon::now();
-            $attendance = Attendance::where('user_id', Auth::id())
-                ->where('date', $today->toDateString())
-                ->first();
-            return view('user.index', compact('attendance'));
-        }
+        return Auth::user()->user_type === 'admin'
+            ? view('admin.index')
+            : app(AttendanceController::class)->index();
     }
     return redirect('login');
 });
