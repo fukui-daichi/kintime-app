@@ -18,8 +18,8 @@ class AttendanceSeeder extends Seeder
         $testUser = User::where('email', 'test@example.com')->first();
 
         if ($testUser) {
-            // 過去20日分のデータを作成
-            for ($i = 0; $i < 20; $i++) {
+            // 1年分のデータを作成
+            for ($i = 0; $i < 365; $i++) {
                 $date = Carbon::now()->subDays($i);
 
                 // 土日はスキップ
@@ -29,11 +29,11 @@ class AttendanceSeeder extends Seeder
 
                 // 9:00 ~ 10:00の間でランダムな出勤時間
                 $clockIn = Carbon::create($date->year, $date->month, $date->day, 9)
-                    ->addMinutes(rand(0, 60));
+                    ->addMinutes(rand(45, 60));
 
-                // 17:00 ~ 19:00の間でランダムな退勤時間
-                $clockOut = Carbon::create($date->year, $date->month, $date->day, 17)
-                    ->addMinutes(rand(0, 120));
+                // 19:00 ~ 22:00の間でランダムな退勤時間
+                $clockOut = Carbon::create($date->year, $date->month, $date->day, 19)
+                    ->addMinutes(rand(0, 180));
 
                 // 実働時間の計算（分単位）
                 // 出退勤時間の差分から休憩時間を引く
