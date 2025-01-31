@@ -8,7 +8,7 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     {{-- 年月選択部分 --}}
-                    <div class="mb-6 flex items-center justify-between">
+                    <div class="mb-6 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                         {{-- 前月リンク --}}
                         <a href="{{ route('attendance.monthly', ['year' => $previousMonth->year, 'month' => $previousMonth->month]) }}"
                            class="text-blue-500 hover:text-blue-700">
@@ -41,40 +41,48 @@
                     </div>
 
                     {{-- 勤怠一覧テーブル --}}
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日付</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">出勤時刻</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">退勤時刻</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">実働時間</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach ($attendances as $data)
-                                    <tr class="{{ $data['is_weekend'] ? 'bg-gray-50' : '' }}">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $data['date']->format('n/j') }}
-                                            ({{ ['日', '月', '火', '水', '木', '金', '土'][$data['date']->dayOfWeek] }})
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $data['clock_in'] ?? '-' }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $data['clock_out'] ?? '-' }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            @if ($data['work_hours'] !== null)
-                                                {{ $data['work_hours'] }}時間{{ $data['work_minutes'] }}分
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
+                    <div class="relative overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        {{-- 固定列 --}}
+                                        <th class="sticky left-0 z-10 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            日付
+                                        </th>
+                                        {{-- スクロール可能な列 --}}
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">出勤時刻</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">退勤時刻</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">実働時間</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="attendance-table-body">
+                                    @foreach ($attendances as $data)
+                                        <tr class="{{ $data['is_weekend'] ? 'bg-gray-50' : '' }}">
+                                            {{-- 固定列 --}}
+                                            <td class="sticky left-0 z-10 px-6 py-4 whitespace-nowrap text-sm text-gray-900 {{ $data['is_weekend'] ? 'bg-gray-50' : 'bg-white' }}">
+                                                {{ $data['date']->format('n/j') }}
+                                                ({{ ['日', '月', '火', '水', '木', '金', '土'][$data['date']->dayOfWeek] }})
+                                            </td>
+                                            {{-- スクロール可能な列 --}}
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {{ $data['clock_in'] ?? '-' }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {{ $data['clock_out'] ?? '-' }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                @if ($data['work_hours'] !== null)
+                                                    {{ $data['work_hours'] }}時間{{ $data['work_minutes'] }}分
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
