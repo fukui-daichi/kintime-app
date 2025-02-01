@@ -57,8 +57,8 @@
                                 <div class="space-y-2">
                                     <p>出勤時刻：{{ $attendanceData['clockInTime'] }}</p>
                                     <p>退勤時刻：{{ $attendanceData['clockOutTime'] }}</p>
-                                    @if ($attendanceData['workHours'] !== null)
-                                        <p>実働時間：{{ $attendanceData['workHours'] }}時間{{ $attendanceData['workMinutes'] }}分</p>
+                                    @if ($attendanceData['workTime'] !== null)
+                                        <p>実働時間：{{ $attendanceData['workTime'] }}</p>
                                     @endif
                                 </div>
                             </div>
