@@ -156,7 +156,7 @@ class ClockService
      */
     private function canClockIn(?Attendance $attendance): bool
     {
-        return !$attendance || $attendance->status !== 'working';
+        return !$attendance;
     }
 
     /**
