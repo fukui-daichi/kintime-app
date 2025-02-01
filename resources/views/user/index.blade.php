@@ -9,17 +9,18 @@
                 <div class="p-6 text-gray-900">
                     {{-- フラッシュメッセージ --}}
                     @if (session('success'))
-                        <div class="mb-4 p-4 text-sm text-green-700 bg-green-100 rounded-lg">
-                            {{ session('success') }}
-                        </div>
+                        <x-common.flash-message
+                            type="success"
+                            :message="session('success')"
+                        />
                     @endif
 
                     @if (session('error'))
-                        <div class="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg">
-                            {{ session('error') }}
-                        </div>
+                        <x-common.flash-message
+                            type="error"
+                            :message="session('error')"
+                        />
                     @endif
-
                     <div class="text-center">
                         {{-- 現在日時の表示 --}}
                         <div class="text-2xl mb-4">{{ now()->format('Y年m月d日') }}</div>
