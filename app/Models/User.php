@@ -4,8 +4,10 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
@@ -31,7 +33,7 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    // 勤怠データとのリレーションを追加
+    // 勤怠データとのリレーション
     public function attendances()
     {
         return $this->hasMany(Attendance::class);
@@ -43,8 +45,28 @@ class User extends Authenticatable
         return "{$this->last_name} {$this->first_name}";
     }
 
-    // 管理者かどうかのチェック
-    public function isAdmin()
+    /**
+     * 申請者としての申請リレーション
+     * ユーザーが申請者として作成した申請一覧を取得
+     */
+    public function requestsAsApplicant(): HasMany
+    {
+        return $this->hasMany(ApprovalRequest::class, 'user_id');
+    }
+
+    /**
+     * 承認者としての申請リレーション
+     * ユーザーが承認者として受け取った申請一覧を取得
+     */
+    public function requestsAsApprover(): HasMany
+    {
+        return $this->hasMany(ApprovalRequest::class, 'approver_id');
+    }
+
+    /**
+     * 管理者かどうかを判定
+     */
+    public function isAdmin(): bool
     {
         return $this->user_type === 'admin';
     }
