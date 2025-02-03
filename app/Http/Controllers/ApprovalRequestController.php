@@ -21,11 +21,11 @@ class ApprovalRequestController extends Controller
     /**
      * 申請一覧を表示（一般ユーザー用）
      */
-    public function index()
+    public function userIndex()
     {
         $requests = $this->approvalRequestService->getUserRequests(Auth::id());
 
-        return view('requests.index', compact('requests'));
+        return view('user.requests.index', compact('requests'));
     }
 
     /**

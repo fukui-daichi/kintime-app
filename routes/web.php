@@ -29,29 +29,27 @@ Route::middleware('auth')->group(function () {
     Route::post('/attendance/clock-out', [AttendanceController::class, 'clockOut'])
         ->name('attendance.clockOut');
 
-    // 申請一覧（一般ユーザー用）
-    Route::get('/requests', [ApprovalRequestController::class, 'index'])
-        ->name('requests.index');
+    // 申請関連のルート
+    Route::prefix('requests')->name('requests.')->group(function () {
+        // 一般ユーザー用のルート
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/', [ApprovalRequestController::class, 'userIndex'])
+                ->name('index');  // /requests
+            Route::get('/create/{attendance}', [ApprovalRequestController::class, 'create'])
+                ->name('create'); // /requests/create/{attendance}
+            Route::post('/', [ApprovalRequestController::class, 'store'])
+                ->name('store');  // /requests (POST)
+        });
 
-    // 申請作成フォーム
-    Route::get('/requests/create/{attendance}', [ApprovalRequestController::class, 'create'])
-        ->name('requests.create');
-
-    // 申請保存
-    Route::post('/requests', [ApprovalRequestController::class, 'store'])
-        ->name('requests.store');
-
-    // 管理者用ルート
-    Route::middleware(['admin'])->group(function () {
-        // 承認待ち一覧
-        Route::get('/admin/requests', [ApprovalRequestController::class, 'adminIndex'])
-            ->name('admin.requests.index');
-
-        // 承認・否認処理
-        Route::patch('/admin/requests/{request}/approve', [ApprovalRequestController::class, 'approve'])
-            ->name('admin.requests.approve');
-        Route::patch('/admin/requests/{request}/reject', [ApprovalRequestController::class, 'reject'])
-            ->name('admin.requests.reject');
+        // 管理者用のルート
+        Route::middleware(['admin'])->group(function () {
+            Route::get('/admin', [ApprovalRequestController::class, 'adminIndex'])
+                ->name('admin.index'); // /requests/admin
+            Route::patch('/{request}/approve', [ApprovalRequestController::class, 'approve'])
+                ->name('approve');      // /requests/{request}/approve
+            Route::patch('/{request}/reject', [ApprovalRequestController::class, 'reject'])
+                ->name('reject');       // /requests/{request}/reject
+        });
     });
 });
 
