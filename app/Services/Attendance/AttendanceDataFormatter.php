@@ -22,13 +22,16 @@ class AttendanceDataFormatter
         $currentDate = $startDate->copy();
 
         while ($currentDate <= $endDate) {
-            $attendance = $attendances->firstWhere('date', $currentDate->toDateString());
+            // dateカラムの値をY-m-d形式に変換して比較
+            $attendance = $attendances->first(function ($attendance) use ($currentDate) {
+                return Carbon::parse($attendance->date)->format('Y-m-d') === $currentDate->format('Y-m-d');
+            });
 
             $result->push([
                 'date' => $currentDate->copy(),
                 'attendance' => $attendance,
                 'is_weekend' => $currentDate->isWeekend(),
-                'clock_in' => $attendance ? Carbon::parse($attendance->clock_in)->format('H:i') : null,
+                'clock_in' => $attendance?->clock_in ? Carbon::parse($attendance->clock_in)->format('H:i') : null,
                 'clock_out' => $attendance?->clock_out ? Carbon::parse($attendance->clock_out)->format('H:i') : null,
                 'work_time' => TimeFormatter::minutesToTime($attendance?->actual_work_time),
                 'overtime' => TimeFormatter::minutesToTime($attendance?->overtime),

@@ -5,6 +5,7 @@ namespace App\Services\Attendance;
 use App\Models\Attendance;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class MonthlyAttendanceService
 {
@@ -64,9 +65,21 @@ class MonthlyAttendanceService
         $endDate = $targetDate->copy()->endOfMonth();
 
         $attendances = Attendance::where('user_id', $userId)
-            ->whereBetween('date', [$startDate, $endDate])
+            ->where(function ($query) use ($startDate, $endDate) {
+                $query->whereDate('date', '>=', $startDate)
+                      ->whereDate('date', '<=', $endDate);
+            })
             ->orderBy('date')
             ->get();
+
+        // デバッグ
+        // Log::debug('Attendance Query Result:', [
+        //     'user_id' => $userId,
+        //     'start_date' => $startDate->toDateString(),
+        //     'end_date' => $endDate->toDateString(),
+        //     'count' => $attendances->count(),
+        //     'first_few' => $attendances->take(3)->toArray()
+        // ]);
 
         return $this->formatter->formatMonthlyData($startDate, $endDate, $attendances);
     }
