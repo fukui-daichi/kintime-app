@@ -114,7 +114,7 @@
 
                     {{-- ページネーション --}}
                     <div class="mt-4">
-                        {{ $requests->links() }}
+                        {{ $requests->appends(['status' => $currentStatus])->links() }}
                     </div>
                 </div>
             </div>
