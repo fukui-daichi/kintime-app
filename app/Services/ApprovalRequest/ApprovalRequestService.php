@@ -98,25 +98,24 @@ class ApprovalRequestService
     /**
      * 申請を承認
      *
-     * @param ApprovalRequest $request 承認する申請
-     * @param string|null $comment 承認コメント
-     * @return bool 処理結果
-     * @throws \Exception DBトランザクション失敗時
+     * @param ApprovalRequest $request
+     * @return bool
      */
-    public function approveRequest(ApprovalRequest $request, ?string $comment = null): bool
+    public function approveRequest(ApprovalRequest $request): bool
     {
         try {
-            return DB::transaction(function () use ($request, $comment) {
+            return DB::transaction(function () use ($request) {
+                // 申請を承認状態に更新
                 $request->update([
-                    'status' => 'approved',
-                    'comment' => $comment,
+                    'status' => 'approved'
                 ]);
 
+                // 勤怠データを修正内容で更新（statusの値を修正）
                 $request->attendance->update([
                     'clock_in' => $request->after_clock_in,
                     'clock_out' => $request->after_clock_out,
                     'break_time' => $request->after_break_hours * 60,
-                    'status' => 'approved',
+                    'status' => 'approved'
                 ]);
 
                 return true;
@@ -130,20 +129,19 @@ class ApprovalRequestService
     /**
      * 申請を否認
      *
-     * @param ApprovalRequest $request 否認する申請
-     * @param string|null $comment 否認理由
-     * @return bool 処理結果
-     * @throws \Exception DBトランザクション失敗時
+     * @param ApprovalRequest $request
+     * @return bool
      */
-    public function rejectRequest(ApprovalRequest $request, ?string $comment = null): bool
+    public function rejectRequest(ApprovalRequest $request): bool
     {
         try {
-            return DB::transaction(function () use ($request, $comment) {
+            return DB::transaction(function () use ($request) {
+                // 申請を否認状態に更新
                 $request->update([
-                    'status' => 'rejected',
-                    'comment' => $comment,
+                    'status' => 'rejected'
                 ]);
 
+                // 勤怠データのステータスを元に戻す
                 $request->attendance->update(['status' => 'left']);
 
                 return true;

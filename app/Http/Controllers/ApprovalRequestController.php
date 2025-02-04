@@ -96,40 +96,32 @@ class ApprovalRequestController extends Controller
     /**
      * 申請を承認
      *
-     * @param UpdateApprovalRequest $request
      * @param ApprovalRequest $approvalRequest
      * @return RedirectResponse
      */
-    public function approve(UpdateApprovalRequest $request, ApprovalRequest $approvalRequest): RedirectResponse
+    public function approve(ApprovalRequest $approvalRequest): RedirectResponse
     {
         try {
-            $this->approvalRequestService->approveRequest(
-                $approvalRequest,
-                $request->validated()['comment'] ?? null
-            );
+            $this->approvalRequestService->approveRequest($approvalRequest);
             return back()->with('success', '申請を承認しました');
         } catch (\Exception $e) {
-            return $this->handleRequestError($e, '申請の承認に失敗しました');
+            return back()->with('error', '申請の承認に失敗しました');
         }
     }
 
     /**
      * 申請を否認
      *
-     * @param RejectApprovalRequest $request
      * @param ApprovalRequest $approvalRequest
      * @return RedirectResponse
      */
-    public function reject(RejectApprovalRequest $request, ApprovalRequest $approvalRequest): RedirectResponse
+    public function reject(ApprovalRequest $approvalRequest): RedirectResponse
     {
         try {
-            $this->approvalRequestService->rejectRequest(
-                $approvalRequest,
-                $request->validated()['comment']
-            );
+            $this->approvalRequestService->rejectRequest($approvalRequest);
             return back()->with('success', '申請を否認しました');
         } catch (\Exception $e) {
-            return $this->handleRequestError($e, '申請の否認に失敗しました');
+            return back()->with('error', '申請の否認に失敗しました');
         }
     }
 

@@ -72,16 +72,31 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             @if($request->status === 'pending')
                                                 <div class="flex space-x-2">
-                                                    <button type="button"
-                                                        class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                                                        onclick="showApproveModal({{ $request->id }})">
-                                                        承認
-                                                    </button>
-                                                    <button type="button"
-                                                        class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                                                        onclick="showRejectModal({{ $request->id }})">
-                                                        否認
-                                                    </button>
+                                                    <form action="{{ route('requests.approve', ['approvalRequest' => $request->id]) }}"
+                                                          method="POST"
+                                                          class="inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <!-- デバッグ用にフォームのactionを表示 -->
+                                                        <!-- {{ route('requests.approve', ['approvalRequest' => $request->id]) }} -->
+                                                        <button type="submit"
+                                                            onclick="return confirm('この申請を承認してよろしいですか？')"
+                                                            class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                                                            承認
+                                                        </button>
+                                                    </form>
+
+                                                    <form action="{{ route('requests.reject', ['approvalRequest' => $request->id]) }}"
+                                                          method="POST"
+                                                          class="inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit"
+                                                            onclick="return confirm('この申請を否認してよろしいですか？')"
+                                                            class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                                                            否認
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             @endif
                                         </td>

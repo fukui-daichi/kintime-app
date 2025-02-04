@@ -27,7 +27,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // 申請関連のルート
-    Route::prefix('requests')->name('requests.')->group(function () {
+    Route::prefix('requests')->name('requests.')->middleware('auth')->group(function () {
         // 共通ルート - ユーザー種別で表示を分岐
         Route::get('/', [ApprovalRequestController::class, 'index'])->name('index');
 
