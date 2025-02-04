@@ -13,34 +13,38 @@ class ApprovalRequestSeeder extends Seeder
      */
     public function run(): void
     {
-        // テストユーザーを取得
-        $testUser = User::where('email', 'test@example.com')->first();
+        // 管理者を取得
         $adminUser = User::where('email', 'admin@example.com')->first();
 
-        if ($testUser && $adminUser) {
-            // 承認待ちの申請を3件作成
+        // 一般ユーザーを取得
+        $users = User::where('user_type', 'user')->get();
+
+        // 各ユーザーに対して10件ずつ申請を作成（合計30件）
+        foreach ($users as $user) {
+            // 承認待ち4件
             ApprovalRequest::factory()
-                ->count(3)
+                ->count(4)
                 ->pending()
                 ->create([
-                    'user_id' => $testUser->id,
+                    'user_id' => $user->id,
                     'approver_id' => $adminUser->id,
                 ]);
 
-            // 承認済みの申請を2件作成
+            // 承認済み4件
             ApprovalRequest::factory()
-                ->count(2)
+                ->count(4)
                 ->approved()
                 ->create([
-                    'user_id' => $testUser->id,
+                    'user_id' => $user->id,
                     'approver_id' => $adminUser->id,
                 ]);
 
-            // 否認された申請を1件作成
+            // 否認2件
             ApprovalRequest::factory()
+                ->count(2)
                 ->rejected()
                 ->create([
-                    'user_id' => $testUser->id,
+                    'user_id' => $user->id,
                     'approver_id' => $adminUser->id,
                 ]);
         }

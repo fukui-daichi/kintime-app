@@ -23,14 +23,16 @@ class UsersTableSeeder extends Seeder
             'hire_date' => '2024-01-01',
         ]);
 
-        // 一般ユーザーのテストアカウント
-        User::create([
-            'first_name' => 'テスト',
-            'last_name' => 'ユーザー',
-            'email' => 'test@example.com',
-            'password' => Hash::make('password'),
-            'user_type' => 'user',
-            'hire_date' => '2024-01-01',
-        ]);
+        // 一般ユーザー3名を作成
+        for ($i = 1; $i <= 3; $i++) {
+            User::create([
+                'first_name' => 'テスト',
+                'last_name' => "ユーザー{$i}",
+                'email' => "test{$i}@example.com",
+                'password' => Hash::make('password'),
+                'user_type' => 'user',
+                'hire_date' => '2024-01-01',
+            ]);
+        }
     }
 }

@@ -21,10 +21,10 @@ class AttendanceSeeder extends Seeder
      */
     public function run(): void
     {
-        // test@example.com ユーザーの勤怠データを作成
-        $testUser = User::where('email', 'test@example.com')->first();
+        // 一般ユーザーを全て取得
+        $users = User::where('user_type', 'user')->get();
 
-        if ($testUser) {
+        foreach ($users as $user) {
             // 1年分のデータを作成
             for ($i = 0; $i < 365; $i++) {
                 $date = Carbon::now()->subDays($i);
@@ -34,55 +34,47 @@ class AttendanceSeeder extends Seeder
                     continue;
                 }
 
-                // 20%の確率で残業パターン（19:00以降）、10%の確率で深夜残業パターン（22:00以降）
+                // 以下のコードは既存と同じ
                 $pattern = rand(1, 100);
-
-                // 9:00 ~ 10:00の間でランダムな出勤時間
                 $clockIn = Carbon::create($date->year, $date->month, $date->day, 9)
                     ->addMinutes(rand(0, 60));
 
-                // パターンに応じて退勤時間を設定
+                // パターンに応じた退勤時間設定（既存コードと同じ）
                 if ($pattern <= 10) {
-                    // 深夜残業パターン（22:00〜24:00）
                     $clockOut = Carbon::create($date->year, $date->month, $date->day, 22)
                         ->addMinutes(rand(0, 120));
                 } elseif ($pattern <= 30) {
-                    // 残業パターン（19:00〜21:00）
                     $clockOut = Carbon::create($date->year, $date->month, $date->day, 19)
                         ->addMinutes(rand(0, 120));
                 } else {
-                    // 通常パターン（17:00〜19:00）
                     $clockOut = Carbon::create($date->year, $date->month, $date->day, 17)
                         ->addMinutes(rand(0, 120));
                 }
 
-                // 実労働時間の計算（分単位）
-                $workMinutes = $clockIn->diffInMinutes($clockOut) - 60; // 休憩時間1時間を引く
-
-                // 残業時間の計算（分単位）
+                // 時間計算（既存コードと同じ）
+                $workMinutes = $clockIn->diffInMinutes($clockOut) - 60;
                 $overtimeMinutes = max(0, $workMinutes - self::REGULAR_WORK_MINUTES);
-
-                // 深夜時間の計算（分単位）
                 $nightWorkMinutes = $this->calculateNightWorkMinutes($clockIn, $clockOut);
 
+                // 勤怠データ作成
                 Attendance::create([
-                    'user_id' => $testUser->id,
+                    'user_id' => $user->id,
                     'date' => $date->format('Y-m-d'),
                     'clock_in' => $clockIn->format('H:i:s'),
                     'clock_out' => $clockOut->format('H:i:s'),
                     'break_time' => 60,
                     'actual_work_time' => $workMinutes,
-                    'overtime' => $overtimeMinutes,        // 分単位で保存
-                    'night_work_time' => $nightWorkMinutes, // 分単位で保存
+                    'overtime' => $overtimeMinutes,
+                    'night_work_time' => $nightWorkMinutes,
                     'status' => 'left',
                     'note' => null
                 ]);
             }
 
-            // 本日分の勤怠データ（出勤のみ）を作成
-            if (!$testUser->attendances()->whereDate('date', Carbon::today())->exists()) {
+            // 本日分のデータ作成
+            if (!$user->attendances()->whereDate('date', Carbon::today())->exists()) {
                 Attendance::create([
-                    'user_id' => $testUser->id,
+                    'user_id' => $user->id,
                     'date' => Carbon::today(),
                     'clock_in' => '09:00:00',
                     'status' => 'working',
