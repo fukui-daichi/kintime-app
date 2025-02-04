@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 
 /**
  * 申請関連の処理を担当するコントローラー
@@ -105,6 +106,7 @@ class ApprovalRequestController extends Controller
             $this->approvalRequestService->approveRequest($approvalRequest);
             return back()->with('success', '申請を承認しました');
         } catch (\Exception $e) {
+            Log::error('承認処理でエラーが発生: ' . $e->getMessage());
             return back()->with('error', '申請の承認に失敗しました');
         }
     }

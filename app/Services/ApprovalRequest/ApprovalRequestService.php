@@ -115,7 +115,7 @@ class ApprovalRequestService
                     'clock_in' => $request->after_clock_in,
                     'clock_out' => $request->after_clock_out,
                     'break_time' => $request->after_break_hours * 60,
-                    'status' => 'approved'
+                    'status' => 'left'
                 ]);
 
                 return true;
