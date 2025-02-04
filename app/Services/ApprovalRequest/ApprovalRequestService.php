@@ -169,4 +169,15 @@ class ApprovalRequestService
         return !$attendance->hasPendingRequest() &&
                $attendance->status !== 'pending_approval';
     }
+
+    /**
+     * 申請フォーム表示用のデータを取得
+     *
+     * @param Attendance $attendance
+     * @return array
+     */
+    public function getRequestFormData(Attendance $attendance): array
+    {
+        return $this->formatter->formatAttendanceForRequest($attendance);
+    }
 }

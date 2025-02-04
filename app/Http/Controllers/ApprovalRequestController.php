@@ -76,8 +76,11 @@ class ApprovalRequestController extends Controller
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
+        // フォーマッターを通してデータを整形
+        $formattedAttendance = $this->approvalRequestService->getRequestFormData($attendance);
+
         // 申請フォームを表示
-        return view('user.requests.create', compact('attendance'));
+        return view('user.requests.create', compact('formattedAttendance'));
     }
 
     /**

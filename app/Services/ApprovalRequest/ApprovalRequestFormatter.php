@@ -2,7 +2,9 @@
 
 namespace App\Services\ApprovalRequest;
 
+use App\Helpers\TimeFormatter;
 use App\Models\ApprovalRequest;
+use App\Models\Attendance;
 use Carbon\Carbon;
 
 class ApprovalRequestFormatter
@@ -77,5 +79,28 @@ class ApprovalRequestFormatter
             'rejected' => 'bg-red-100 text-red-800',
             default => 'bg-gray-100 text-gray-800',
         };
+    }
+
+    /**
+     * 申請フォーム表示用に勤怠データを整形
+     *
+     * @param Attendance $attendance
+     * @return array
+     */
+    public function formatAttendanceForRequest(Attendance $attendance): array
+    {
+        return [
+            'id' => $attendance->id,
+            'date' => $attendance->date->format('Y年m月d日'),
+            'clock_in' => $attendance->clock_in
+                ? Carbon::parse($attendance->clock_in)->format('H:i')
+                : '未打刻',
+            'clock_out' => $attendance->clock_out
+                ? Carbon::parse($attendance->clock_out)->format('H:i')
+                : '未打刻',
+            'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
+            'actual_work_time' => TimeFormatter::minutesToTime($attendance->actual_work_time),
+            'raw_attendance' => $attendance,
+        ];
     }
 }

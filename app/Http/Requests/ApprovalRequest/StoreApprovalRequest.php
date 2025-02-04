@@ -23,9 +23,27 @@ class StoreApprovalRequest extends FormRequest
         return [
             'attendance_id' => 'required|exists:attendances,id',
             'request_type' => 'required|in:time_correction,break_time_modification',
-            'after_clock_in' => 'required_if:request_type,time_correction|date_format:H:i',
-            'after_clock_out' => 'required_if:request_type,time_correction|date_format:H:i|after:after_clock_in',
-            'after_break_hours' => 'required_if:request_type,break_time_modification|numeric|between:0,5',
+            // 時刻修正の場合は、出勤時刻と退勤時刻のどちらかが必須
+            'after_clock_in' => [
+                'nullable',
+                'required_without_all:after_clock_out',
+                'date_format:H:i',
+                'required_if:request_type,time_correction',
+            ],
+            'after_clock_out' => [
+                'nullable',
+                'required_without_all:after_clock_in',
+                'date_format:H:i',
+                'required_if:request_type,time_correction',
+                // 出勤時刻が入力されている場合は、退勤時刻は出勤時刻より後でなければならない
+                'after:after_clock_in',
+            ],
+            // 休憩時間修正の場合は、休憩時間が必須
+            'after_break_hours' => [
+                'nullable',
+                'required_if:request_type,break_time_modification',
+                'date_format:H:i',
+            ],
             'reason' => 'required|string|max:500',
         ];
     }
@@ -40,14 +58,13 @@ class StoreApprovalRequest extends FormRequest
             'attendance_id.exists' => '選択された勤怠データは存在しません',
             'request_type.required' => '申請種別が選択されていません',
             'request_type.in' => '無効な申請種別です',
-            'after_clock_in.required_if' => '出勤時刻を入力してください',
+            'after_clock_in.required_without_all' => '出勤時刻または退勤時刻のいずれかを入力してください',
             'after_clock_in.date_format' => '出勤時刻は HH:mm 形式で入力してください',
-            'after_clock_out.required_if' => '退勤時刻を入力してください',
+            'after_clock_out.required_without_all' => '出勤時刻または退勤時刻のいずれかを入力してください',
             'after_clock_out.date_format' => '退勤時刻は HH:mm 形式で入力してください',
             'after_clock_out.after' => '退勤時刻は出勤時刻より後である必要があります',
             'after_break_hours.required_if' => '休憩時間を入力してください',
-            'after_break_hours.numeric' => '休憩時間は数値で入力してください',
-            'after_break_hours.between' => '休憩時間は0〜5時間の間で入力してください',
+            'after_break_hours.date_format' => '休憩時間は HH:mm 形式で入力してください',
             'reason.required' => '申請理由を入力してください',
             'reason.max' => '申請理由は500文字以内で入力してください',
         ];
