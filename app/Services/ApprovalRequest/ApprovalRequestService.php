@@ -4,21 +4,36 @@ namespace App\Services\ApprovalRequest;
 
 use App\Models\ApprovalRequest;
 use App\Models\Attendance;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * 申請に関するビジネスロジックを管理するサービスクラス
+ */
 class ApprovalRequestService
 {
+    /**
+     * @var ApprovalRequestFormatter
+     */
     private $formatter;
 
+    /**
+     * コンストラクタ
+     *
+     * @param ApprovalRequestFormatter $formatter
+     */
     public function __construct(ApprovalRequestFormatter $formatter)
     {
         $this->formatter = $formatter;
     }
 
     /**
-     * ユーザーの申請一覧を取得
+     * 指定したユーザーの申請一覧を取得
+     *
+     * @param int $userId ユーザーID
+     * @return Collection フォーマット済みの申請一覧
      */
     public function getUserRequests(int $userId): Collection
     {
@@ -31,31 +46,47 @@ class ApprovalRequestService
     }
 
     /**
-     * 承認待ちの申請一覧を取得（管理者用）
+     * ステータスでフィルタリングした申請一覧を取得
+     *
+     * @param string|null $status 取得したい申請のステータス（null or 'all'の場合は全件取得）
+     * @param int $perPage 1ページあたりの表示件数
+     * @return LengthAwarePaginator ページネーション済みの申請一覧
      */
-    public function getPendingRequests(): Collection
+    public function getFilteredRequests(?string $status = 'pending', int $perPage = 20): LengthAwarePaginator
     {
-        $requests = ApprovalRequest::with(['user', 'attendance', 'approver'])
-            ->where('status', 'pending')
-            ->latest()
-            ->get();
+        $query = ApprovalRequest::with(['user', 'attendance', 'approver'])
+            ->when($status && $status !== 'all', function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->latest();
 
-        return $requests->map(fn($request) => $this->formatter->format($request));
+        return $query->paginate($perPage);
     }
 
     /**
-     * 申請を作成
+     * 承認待ちの申請一覧を取得（管理者用）
+     *
+     * @return Collection フォーマット済みの承認待ち申請一覧
+     */
+    public function getPendingRequests(): Collection
+    {
+        $requests = $this->getFilteredRequests('pending')->items();
+        return collect($requests)->map(fn($request) => $this->formatter->format($request));
+    }
+
+    /**
+     * 新規申請を作成
+     *
+     * @param array $data 申請データ
+     * @return ApprovalRequest 作成された申請
+     * @throws \Exception DBトランザクション失敗時
      */
     public function createRequest(array $data): ApprovalRequest
     {
         try {
             return DB::transaction(function () use ($data) {
-                // 申請を作成
                 $request = ApprovalRequest::create($data);
-
-                // 勤怠データのステータスを「承認待ち」に変更
                 $request->attendance->update(['status' => 'pending_approval']);
-
                 return $request;
             });
         } catch (\Exception $e) {
@@ -66,22 +97,25 @@ class ApprovalRequestService
 
     /**
      * 申請を承認
+     *
+     * @param ApprovalRequest $request 承認する申請
+     * @param string|null $comment 承認コメント
+     * @return bool 処理結果
+     * @throws \Exception DBトランザクション失敗時
      */
     public function approveRequest(ApprovalRequest $request, ?string $comment = null): bool
     {
         try {
             return DB::transaction(function () use ($request, $comment) {
-                // 申請を承認状態に更新
                 $request->update([
                     'status' => 'approved',
                     'comment' => $comment,
                 ]);
 
-                // 勤怠データを修正内容で更新
                 $request->attendance->update([
                     'clock_in' => $request->after_clock_in,
                     'clock_out' => $request->after_clock_out,
-                    'break_time' => $request->after_break_hours * 60, // 時間を分に変換
+                    'break_time' => $request->after_break_hours * 60,
                     'status' => 'approved',
                 ]);
 
@@ -95,18 +129,21 @@ class ApprovalRequestService
 
     /**
      * 申請を否認
+     *
+     * @param ApprovalRequest $request 否認する申請
+     * @param string|null $comment 否認理由
+     * @return bool 処理結果
+     * @throws \Exception DBトランザクション失敗時
      */
     public function rejectRequest(ApprovalRequest $request, ?string $comment = null): bool
     {
         try {
             return DB::transaction(function () use ($request, $comment) {
-                // 申請を否認状態に更新
                 $request->update([
                     'status' => 'rejected',
                     'comment' => $comment,
                 ]);
 
-                // 勤怠データのステータスを元に戻す
                 $request->attendance->update(['status' => 'left']);
 
                 return true;
@@ -118,7 +155,10 @@ class ApprovalRequestService
     }
 
     /**
-     * 申請が修正可能か確認
+     * 勤怠データが修正申請可能か確認
+     *
+     * @param Attendance $attendance 確認対象の勤怠データ
+     * @return bool 修正申請可能な場合はtrue
      */
     public function canRequestModification(Attendance $attendance): bool
     {
