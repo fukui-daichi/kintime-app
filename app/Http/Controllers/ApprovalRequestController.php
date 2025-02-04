@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ApprovalRequest\CreateApprovalRequest;
 use App\Models\ApprovalRequest;
 use App\Models\Attendance;
 use App\Http\Requests\ApprovalRequest\StoreApprovalRequest;
@@ -70,27 +71,35 @@ class ApprovalRequestController extends Controller
      */
     public function create(Attendance $attendance)
     {
+        // 申請可能か確認
         if (!$this->approvalRequestService->canRequestModification($attendance)) {
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
-        return view('requests.create', compact('attendance'));
+        // 申請フォームを表示
+        return view('user.requests.create', compact('attendance'));
     }
 
     /**
      * 申請を保存
      *
-     * @param StoreApprovalRequest $request
+     * @param CreateApprovalRequest $request
      * @return RedirectResponse
      */
-    public function store(StoreApprovalRequest $request): RedirectResponse
+    public function store(CreateApprovalRequest $request): RedirectResponse
     {
         try {
+            // 申請データを作成
             $this->approvalRequestService->createRequest($request->validatedData());
+
             return redirect()->route('requests.index')
                 ->with('success', '申請を送信しました');
         } catch (\Exception $e) {
-            return $this->handleRequestError($e, '申請の送信に失敗しました');
+            Log::error('申請作成エラー: ' . $e->getMessage());
+
+            return back()
+                ->with('error', '申請の送信に失敗しました')
+                ->withInput();
         }
     }
 

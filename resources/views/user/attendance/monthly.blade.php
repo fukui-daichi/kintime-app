@@ -92,11 +92,13 @@
                                                 {{ $data['night_work_time'] ?? '-' }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                @if($data['attendance'])
+                                                @if ($data['attendance'] && !$data['attendance']->hasPendingRequest())
                                                     <a href="{{ route('requests.create', ['attendance' => $data['attendance']->id]) }}"
                                                        class="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600">
-                                                        申請
+                                                        修正申請
                                                     </a>
+                                                @elseif ($data['attendance']?->hasPendingRequest())
+                                                    <span class="text-yellow-600">申請中</span>
                                                 @endif
                                             </td>
                                         </tr>

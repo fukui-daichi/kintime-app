@@ -77,16 +77,22 @@ class ApprovalRequestService
     /**
      * 新規申請を作成
      *
-     * @param array $data 申請データ
-     * @return ApprovalRequest 作成された申請
-     * @throws \Exception DBトランザクション失敗時
+     * @param array $data
+     * @return ApprovalRequest
+     * @throws \Exception
      */
     public function createRequest(array $data): ApprovalRequest
     {
         try {
             return DB::transaction(function () use ($data) {
+                // リクエストデータから申請を作成
                 $request = ApprovalRequest::create($data);
-                $request->attendance->update(['status' => 'pending_approval']);
+
+                // 関連する勤怠データのステータスを更新
+                $request->attendance->update([
+                    'status' => 'pending_approval'
+                ]);
+
                 return $request;
             });
         } catch (\Exception $e) {
