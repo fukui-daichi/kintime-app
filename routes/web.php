@@ -28,18 +28,17 @@ Route::middleware('auth')->group(function () {
 
     // 申請関連のルート
     Route::prefix('requests')->name('requests.')->group(function () {
+        // 共通ルート - ユーザー種別で表示を分岐
+        Route::get('/', [ApprovalRequestController::class, 'index'])->name('index');
+
         // 一般ユーザー用のルート
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/', [ApprovalRequestController::class, 'userIndex'])->name('index');
-            Route::get('/create/{attendance}', [ApprovalRequestController::class, 'create'])->name('create');
-            Route::post('/', [ApprovalRequestController::class, 'store'])->name('store');
-        });
+        Route::get('/create/{attendance}', [ApprovalRequestController::class, 'create'])->name('create');
+        Route::post('/', [ApprovalRequestController::class, 'store'])->name('store');
 
         // 管理者用のルート
-        Route::middleware(['admin'])->group(function () {
-            Route::get('/admin', [ApprovalRequestController::class, 'adminIndex'])->name('admin.index');
-            Route::patch('/{request}/approve', [ApprovalRequestController::class, 'approve'])->name('approve');
-            Route::patch('/{request}/reject', [ApprovalRequestController::class, 'reject'])->name('reject');
+        Route::middleware('admin')->group(function () {
+            Route::patch('/{approvalRequest}/approve', [ApprovalRequestController::class, 'approve'])->name('approve');
+            Route::patch('/{approvalRequest}/reject', [ApprovalRequestController::class, 'reject'])->name('reject');
         });
     });
 });

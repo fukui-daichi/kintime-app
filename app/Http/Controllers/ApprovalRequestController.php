@@ -34,35 +34,31 @@ class ApprovalRequestController extends Controller
     }
 
     /**
-     * 申請一覧を表示（一般ユーザー用）
-     *
-     * @return View
-     */
-    public function userIndex(): View
-    {
-        $requests = $this->approvalRequestService->getUserRequests(Auth::id());
-        return view('user.requests.index', compact('requests'));
-    }
-
-    /**
-     * 承認待ち一覧を表示（管理者用）
+     * ユーザー種別に応じた申請一覧を表示
      *
      * @param Request $request
      * @return View
      */
-    public function adminIndex(Request $request): View
+    public function index(Request $request): View
     {
-        $currentStatus = $request->query('status', 'pending');
-        $requests = $this->approvalRequestService->getFilteredRequests($currentStatus);
+        if (Auth::user()->user_type === 'admin') {
+            // 管理者用の処理
+            $currentStatus = $request->query('status', 'pending');
+            $requests = $this->approvalRequestService->getFilteredRequests($currentStatus);
 
-        $statusList = [
-            'all' => 'すべて',
-            'pending' => '承認待ち',
-            'approved' => '承認済み',
-            'rejected' => '否認'
-        ];
+            $statusList = [
+                'all' => 'すべて',
+                'pending' => '承認待ち',
+                'approved' => '承認済み',
+                'rejected' => '否認'
+            ];
 
-        return view('admin.requests.index', compact('requests', 'statusList', 'currentStatus'));
+            return view('admin.requests.index', compact('requests', 'statusList', 'currentStatus'));
+        } else {
+            // 一般ユーザー用の処理
+            $requests = $this->approvalRequestService->getUserRequests(Auth::id());
+            return view('user.requests.index', compact('requests'));
+        }
     }
 
     /**

@@ -10,7 +10,7 @@
             {{-- ステータスフィルター --}}
             <div class="mb-6 flex space-x-4">
                 @foreach ($statusList as $key => $label)
-                    <a href="{{ route('requests.admin.index', ['status' => $key]) }}"
+                    <a href="{{ route('requests.index', ['status' => $key]) }}"
                         class="px-4 py-2 rounded-md {{ $currentStatus === $key
                             ? 'bg-blue-500 text-white'
                             : 'bg-white text-gray-700 hover:bg-gray-50' }}">
