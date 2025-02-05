@@ -13,6 +13,7 @@
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="'/'" :active="request()->is('/')">ダッシュボード</x-nav-link>
+                    <x-nav-link :href="'/requests'" :active="request()->is('requests')">申請一覧</x-nav-link>
                 </div>
             </div>
 
