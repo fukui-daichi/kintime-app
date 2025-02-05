@@ -11,6 +11,7 @@ class ClockService
     private const REGULAR_WORK_MINUTES = 480; // 8時間 = 480分
     private const NIGHT_WORK_START = 22; // 深夜時間帯開始
     private const NIGHT_WORK_END = 5;    // 深夜時間帯終了
+    private const DEFAULT_BREAK_TIME = 60; // デフォルトの休憩時間（分）
 
     /**
      * 勤怠情報に関するデータを取得
@@ -54,6 +55,7 @@ class ClockService
             'user_id' => $userId,
             'date' => Carbon::now()->toDateString(),
             'clock_in' => Carbon::now()->toTimeString(),
+            'break_time' => self::DEFAULT_BREAK_TIME,
             'status' => 'working',
         ]);
 
@@ -85,21 +87,22 @@ class ClockService
         $clockOut = Carbon::now();
 
         // 勤務時間の計算（分）
-        $workMinutes = $clockIn->floatDiffInMinutes($clockOut);
-        // 実労働時間（休憩時間を引く）
-        $actualWorkMinutes = $workMinutes - $attendance->break_time;
+        $workMinutes = $clockIn->diffInMinutes($clockOut);
 
-        // 残業時間の計算（分）
-        $overtime = max(0, $actualWorkMinutes - self::REGULAR_WORK_MINUTES);
+        // 実労働時間（休憩時間を引く）
+        $actualWorkMinutes = $workMinutes - ($attendance->break_time ?? self::DEFAULT_BREAK_TIME);
+
+        // 残業時間の計算
+        $overtimeMinutes = max(0, $actualWorkMinutes - self::REGULAR_WORK_MINUTES);
 
         // 深夜時間の計算
         $nightWorkMinutes = $this->calculateNightWorkMinutes($clockIn, $clockOut);
 
         $attendance->update([
             'clock_out' => $clockOut->format('H:i:s'),
-            'actual_work_time' => (int)$actualWorkMinutes,
-            'overtime' => $overtime > 0 ? (int)$overtime : null,
-            'night_work_time' => $nightWorkMinutes > 0 ? (int)$nightWorkMinutes : null,
+            'actual_work_time' => $actualWorkMinutes,
+            'overtime' => $overtimeMinutes,
+            'night_work_time' => $nightWorkMinutes,
             'status' => 'left',
         ]);
 
@@ -123,12 +126,9 @@ class ClockService
 
         while ($currentTime < $clockOut) {
             $hour = (int)$currentTime->format('H');
-
-            // 22時〜24時、または0時〜5時の場合は深夜時間として計算
             if ($hour >= self::NIGHT_WORK_START || $hour < self::NIGHT_WORK_END) {
                 $nightWorkMinutes++;
             }
-
             $currentTime->addMinute();
         }
 
