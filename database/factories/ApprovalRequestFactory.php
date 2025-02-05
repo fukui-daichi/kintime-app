@@ -34,6 +34,9 @@ class ApprovalRequestFactory extends Factory
             ? $beforeClockOut->copy()->addMinutes(fake()->numberBetween(-30, 30))
             : Carbon::now()->setTime(18, 0);
 
+        // 休憩時間のオプション（分単位）
+        $breakTimeOptions = [30, 60, 90];
+
         return [
             'user_id' => $attendance->user_id,
             'approver_id' => User::factory()->state(['user_type' => 'admin']),
@@ -41,10 +44,10 @@ class ApprovalRequestFactory extends Factory
             'request_type' => fake()->randomElement(['time_correction', 'break_time_modification']),
             'before_clock_in' => $beforeClockIn,
             'before_clock_out' => $beforeClockOut,
-            'before_break_hours' => 1.00,
+            'before_break_time' => 60,  // デフォルト60分
             'after_clock_in' => $afterClockIn,
             'after_clock_out' => $afterClockOut,
-            'after_break_hours' => fake()->randomElement([0.5, 1.0, 1.5]),
+            'after_break_time' => fake()->randomElement($breakTimeOptions),  // 30分, 60分, 90分からランダム
             'status' => fake()->randomElement(['pending', 'approved', 'rejected']),
             'reason' => fake()->sentence(),
             'comment' => fake()->optional(0.7)->sentence(),

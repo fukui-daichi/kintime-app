@@ -22,10 +22,10 @@ class ApprovalRequest extends Model
         'request_type',     // 申請種別
         'before_clock_in',  // 修正前出勤時間
         'before_clock_out', // 修正前退勤時間
-        'before_break_hours', // 修正前休憩時間
+        'before_break_time', // 修正前休憩時間
         'after_clock_in',   // 修正後出勤時間
         'after_clock_out',  // 修正後退勤時間
-        'after_break_hours', // 修正後休憩時間
+        'after_break_time', // 修正後休憩時間
         'status',           // 承認状態
         'reason',           // 申請理由
         'comment',          // 承認者コメント
@@ -41,8 +41,8 @@ class ApprovalRequest extends Model
         'before_clock_out' => 'datetime',
         'after_clock_in' => 'datetime',
         'after_clock_out' => 'datetime',
-        'before_break_hours' => 'decimal:2',
-        'after_break_hours' => 'decimal:2',
+        'before_break_time' => 'integer',
+        'after_break_time' => 'integer',
     ];
 
     /**
