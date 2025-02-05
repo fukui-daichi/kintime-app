@@ -313,28 +313,74 @@ class ApprovalRequestService
     }
 
     /**
-     * 勤務時間の計算
+     * 勤務時間の計算処理
      *
-     * @param array $updateData
-     * @param Attendance $attendance
-     * @return array
+     * @param array $updateData 更新データ
+     * @param Attendance $attendance 勤怠データ
+     * @return array 計算済みの更新データ
      */
     private function calculateWorkTimes(array $updateData, Attendance $attendance): array
     {
-        $clockIn = $updateData['clock_in'] ?? $attendance->clock_in;
-        $clockOut = $updateData['clock_out'] ?? $attendance->clock_out;
-        $breakTime = $updateData['break_time'] ?? $attendance->break_time;
+        // 出勤・退勤時刻を取得
+        $date = $attendance->date->format('Y-m-d');
+
+        // 出勤時刻の処理
+        $clockIn = isset($updateData['clock_in'])
+            ? $updateData['clock_in']
+            : ($attendance->clock_in
+                ? Carbon::parse($date . ' ' . $attendance->clock_in->format('H:i:s'))
+                : null);
+
+        // 退勤時刻の処理
+        $clockOut = isset($updateData['clock_out'])
+            ? $updateData['clock_out']
+            : ($attendance->clock_out
+                ? Carbon::parse($date . ' ' . $attendance->clock_out->format('H:i:s'))
+                : null);
+
+        // 休憩時間（分単位）
+        $breakTime = $updateData['break_time'] ?? $attendance->break_time ?? WorkTimeConstants::DEFAULT_BREAK_MINUTES;
 
         if ($clockIn && $clockOut) {
-            $workMinutes = Carbon::parse($clockOut)->diffInMinutes(Carbon::parse($clockIn));
-            $actualWorkMinutes = $workMinutes - $breakTime;
+            try {
+                // 総勤務時間を計算
+                $workMinutes = $clockIn->diffInMinutes($clockOut);
 
-            $updateData['actual_work_time'] = $actualWorkMinutes;
-            $updateData['overtime'] = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
-            $updateData['night_work_time'] = $this->calculateNightWorkMinutes(
-                Carbon::parse($clockIn),
-                Carbon::parse($clockOut)
-            );
+                // 実労働時間 = 総勤務時間 - 休憩時間
+                $actualWorkMinutes = $workMinutes - $breakTime;
+
+                // デバッグログ
+                Log::debug('勤務時間計算詳細', [
+                    'clock_in' => $clockIn->format('H:i'),
+                    'clock_out' => $clockOut->format('H:i'),
+                    'total_minutes' => $workMinutes,
+                    'break_time' => $breakTime,
+                    'actual_minutes' => $actualWorkMinutes,
+                    'formatted_hours' => floor($actualWorkMinutes / 60),
+                    'formatted_minutes' => $actualWorkMinutes % 60,
+                    'formatted_work_time' => sprintf(
+                        '%d:%02d',
+                        floor($actualWorkMinutes / 60),
+                        $actualWorkMinutes % 60
+                    )
+                ]);
+
+                // 残業時間 = 実労働時間 - 所定労働時間
+                $overtimeMinutes = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
+
+                $updateData['actual_work_time'] = $actualWorkMinutes;
+                $updateData['overtime'] = $overtimeMinutes;
+                $updateData['night_work_time'] = $this->calculateNightWorkMinutes($clockIn, $clockOut);
+
+            } catch (\Exception $e) {
+                Log::error('勤務時間計算エラー', [
+                    'error' => $e->getMessage(),
+                    'clock_in' => $clockIn->format('H:i'),
+                    'clock_out' => $clockOut->format('H:i'),
+                    'break_time' => $breakTime
+                ]);
+                throw $e;
+            }
         }
 
         return $updateData;
@@ -343,16 +389,22 @@ class ApprovalRequestService
     /**
      * 深夜時間を計算（22時〜5時の間の勤務時間）
      *
-     * @param Carbon $clockIn
-     * @param Carbon $clockOut
+     * @param Carbon $clockIn 出勤時刻
+     * @param Carbon $clockOut 退勤時刻
      * @return int 深夜時間（分）
      */
     private function calculateNightWorkMinutes(Carbon $clockIn, Carbon $clockOut): int
     {
         $nightWorkMinutes = 0;
         $currentTime = $clockIn->copy();
+        $endTime = $clockOut->copy();
 
-        while ($currentTime < $clockOut) {
+        // 日付をまたぐ場合の処理
+        if ($clockOut->lt($clockIn)) {
+            $endTime->addDay();
+        }
+
+        while ($currentTime->lt($endTime)) {
             $hour = (int)$currentTime->format('H');
             if ($hour >= WorkTimeConstants::NIGHT_WORK_START_HOUR ||
                 $hour < WorkTimeConstants::NIGHT_WORK_END_HOUR) {
