@@ -9,6 +9,7 @@ use App\Constants\WorkTimeConstants;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -94,52 +95,45 @@ class ApprovalRequestService
     {
         try {
             // トランザクション開始
-            $request = ApprovalRequest::beginTransaction();
+            return DB::transaction(function () use ($data) {
+                // 申請を作成
+                $request = ApprovalRequest::create($data);
 
-            // 申請を作成
-            $request = ApprovalRequest::create($data);
+                // 関連する勤怠データのステータスを更新
+                $request->attendance->update(['status' => 'pending_approval']);
 
-            // 関連する勤怠データのステータスを更新
-            $request->attendance->update(['status' => 'pending_approval']);
-
-            // トランザクションをコミット
-            ApprovalRequest::commit();
-
-            return $request;
+                return $request;
+            });
         } catch (\Exception $e) {
-            // エラー時はロールバック
-            ApprovalRequest::rollBack();
-
             Log::error('申請作成エラー', ['error' => $e->getMessage()]);
             throw $e;
         }
     }
 
     /**
-     * 申請を承認
+     * 申請を承認する
      *
-     * @param ApprovalRequest $request
-     * @return bool
-     * @throws \Exception
+     * @param ApprovalRequest $request 承認対象の申請
+     * @return bool 承認処理の成功・失敗
+     * @throws \Exception トランザクション処理で例外が発生した場合
      */
     public function approveRequest(ApprovalRequest $request): bool
     {
         try {
-            ApprovalRequest::beginTransaction();
+            // トランザクションで処理を実行
+            DB::transaction(function () use ($request) {
+                // 申請を承認状態に更新
+                $request->update(['status' => 'approved']);
 
-            // 申請を承認状態に更新
-            $request->update(['status' => 'approved']);
+                // 勤怠データの更新
+                $updateData = $this->prepareAttendanceUpdateData($request);
+                $request->attendance->update($updateData);
+            });
 
-            // 勤怠データの更新
-            $updateData = $this->prepareAttendanceUpdateData($request);
-            $request->attendance->update($updateData);
-
-            ApprovalRequest::commit();
             return true;
 
         } catch (\Exception $e) {
-            ApprovalRequest::rollBack();
-
+            // エラーログを記録
             Log::error('申請承認エラー', [
                 'request_id' => $request->id,
                 'error' => $e->getMessage()
@@ -149,29 +143,32 @@ class ApprovalRequestService
     }
 
     /**
-     * 申請を否認
+     * 申請を否認する
      *
-     * @param ApprovalRequest $request
-     * @return bool
-     * @throws \Exception
+     * @param ApprovalRequest $request 否認対象の申請
+     * @return bool 否認処理の成功・失敗
+     * @throws \Exception トランザクション処理で例外が発生した場合
      */
     public function rejectRequest(ApprovalRequest $request): bool
     {
         try {
-            ApprovalRequest::beginTransaction();
+            // トランザクションで処理を実行
+            DB::transaction(function () use ($request) {
+                // 申請を否認状態に更新
+                $request->update([
+                    'status' => 'rejected'
+                ]);
 
-            // 申請を否認状態に更新
-            $request->update(['status' => 'rejected']);
+                // 勤怠データのステータスを元に戻す
+                $request->attendance->update([
+                    'status' => 'left'
+                ]);
+            });
 
-            // 勤怠データのステータスを元に戻す
-            $request->attendance->update(['status' => 'left']);
-
-            ApprovalRequest::commit();
             return true;
 
         } catch (\Exception $e) {
-            ApprovalRequest::rollBack();
-
+            // エラーログを記録
             Log::error('申請否認エラー', [
                 'request_id' => $request->id,
                 'error' => $e->getMessage()
