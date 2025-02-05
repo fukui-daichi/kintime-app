@@ -415,4 +415,76 @@ class ApprovalRequestService
 
         return $nightWorkMinutes;
     }
+
+    /**
+     * 申請種別の選択肢を取得
+     *
+     * @return array<string, string>
+     */
+    private function getRequestTypeOptions(): array
+    {
+        return [
+            'time_correction' => '時刻修正',
+            'break_time_modification' => '休憩時間修正'
+        ];
+    }
+
+    /**
+     * フォームのデフォルト値を取得
+     *
+     * @param Attendance $attendance
+     * @return array
+     */
+    private function getFormDefaultValues(Attendance $attendance): array
+    {
+        return [
+            'attendance_id' => $attendance->id,
+            'clock_in' => $attendance->clock_in?->format('H:i'),
+            'clock_out' => $attendance->clock_out?->format('H:i'),
+            'break_time' => TimeFormatter::minutesToTime($attendance->break_time)
+        ];
+    }
+
+    /**
+     * 現在の勤怠情報を取得
+     *
+     * @param Attendance $attendance
+     * @return array
+     */
+    private function getCurrentAttendanceData(Attendance $attendance): array
+    {
+        return [
+            'date' => TimeFormatter::formatDate($attendance->date, 'Y年m月d日'),
+            'clock_in' => $attendance->clock_in
+                ? TimeFormatter::formatTime($attendance->clock_in)
+                : '未打刻',
+            'clock_out' => $attendance->clock_out
+                ? TimeFormatter::formatTime($attendance->clock_out)
+                : '未打刻',
+            'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
+            'actual_work_time' => TimeFormatter::minutesToTime($attendance->actual_work_time)
+        ];
+    }
+
+    /**
+     * フォーム表示用のデータを整形して取得
+     *
+     * @param Attendance $attendance
+     * @return array フォーム表示用のデータ
+     */
+    public function getFormData(Attendance $attendance): array
+    {
+        return [
+            'currentAttendance' => $this->getCurrentAttendanceData($attendance),
+            'formData' => $this->getFormDefaultValues($attendance),
+            'requestTypes' => $this->getRequestTypeOptions(),
+            'formattedAttendance' => [
+                'id' => $attendance->id,
+                'clock_in' => TimeFormatter::formatTime($attendance->clock_in),
+                'clock_out' => TimeFormatter::formatTime($attendance->clock_out),
+                'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
+                'raw_attendance' => $attendance,
+            ],
+        ];
+    }
 }

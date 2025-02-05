@@ -14,28 +14,30 @@
                         <h3 class="text-lg font-medium text-gray-900 mb-4">現在の勤怠情報</h3>
                         <div class="bg-gray-50 p-4 rounded-lg">
                             <div class="grid grid-cols-4 gap-4">
-                                {{-- 1行目: 日付 --}}
+                                {{-- 日付 --}}
                                 <div class="col-span-4">
                                     <span class="text-sm text-gray-500">日付</span>
-                                    <p class="text-gray-900 text-lg font-medium">{{ $formattedAttendance['date'] }}</p>
+                                    <p class="text-gray-900 text-lg font-medium">
+                                        {{ $currentAttendance['date'] }}
+                                    </p>
                                 </div>
 
-                                {{-- 2行目: 時刻情報 --}}
+                                {{-- 勤怠情報 --}}
                                 <div>
                                     <span class="text-sm text-gray-500">出勤時刻</span>
-                                    <p class="text-gray-900">{{ $formattedAttendance['clock_in'] }}</p>
+                                    <p class="text-gray-900">{{ $currentAttendance['clock_in'] }}</p>
                                 </div>
                                 <div>
                                     <span class="text-sm text-gray-500">退勤時刻</span>
-                                    <p class="text-gray-900">{{ $formattedAttendance['clock_out'] }}</p>
+                                    <p class="text-gray-900">{{ $currentAttendance['clock_out'] }}</p>
                                 </div>
                                 <div>
                                     <span class="text-sm text-gray-500">休憩時間</span>
-                                    <p class="text-gray-900">{{ $formattedAttendance['break_time'] }}</p>
+                                    <p class="text-gray-900">{{ $currentAttendance['break_time'] }}</p>
                                 </div>
                                 <div>
                                     <span class="text-sm text-gray-500">実労働時間</span>
-                                    <p class="text-gray-900">{{ $formattedAttendance['actual_work_time'] }}</p>
+                                    <p class="text-gray-900">{{ $currentAttendance['actual_work_time'] }}</p>
                                 </div>
                             </div>
                         </div>
@@ -52,10 +54,11 @@
                         </div>
                     @endif
 
+                    {{-- 申請フォーム --}}
                     <form method="POST" action="{{ route('requests.store') }}" class="space-y-6">
                         @csrf
                         {{-- 勤怠IDを隠しフィールドとして送信 --}}
-                        <input type="hidden" name="attendance_id" value="{{ $formattedAttendance['id'] }}">
+                        <input type="hidden" name="attendance_id" value="{{ $formData['attendance_id'] }}">
 
                         {{-- 申請種別の選択 --}}
                         <div>
@@ -63,13 +66,16 @@
                             <select id="request_type" name="request_type"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     onchange="toggleInputFields()">
-                                <option value="time_correction">時刻修正</option>
-                                <option value="break_time_modification">休憩時間修正</option>
+                                @foreach($requestTypes as $value => $label)
+                                    <option value="{{ $value }}" {{ old('request_type') == $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
 
                         {{-- 時刻修正用フィールド --}}
-                        <div id="time_correction_fields">
+                        <div id="time_correction_fields" class="{{ old('request_type') === 'break_time_modification' ? 'hidden' : '' }}">
                             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 {{-- 出勤時刻 --}}
                                 <div>
@@ -80,11 +86,10 @@
                                         </span>
                                     </label>
                                     <input type="time"
-                                        id="after_clock_in"
-                                        name="after_clock_in"
-                                        {{-- Carbon::parse()を使用して正しい時刻フォーマットに変換 --}}
-                                        value="{{ old('after_clock_in') ?? \Carbon\Carbon::parse($formattedAttendance['raw_attendance']->clock_in)->format('H:i') }}"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                           id="after_clock_in"
+                                           name="after_clock_in"
+                                           value="{{ old('after_clock_in') ?? $formData['clock_in'] }}"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
 
                                 {{-- 退勤時刻 --}}
@@ -96,18 +101,16 @@
                                         </span>
                                     </label>
                                     <input type="time"
-                                        id="after_clock_out"
-                                        name="after_clock_out"
-                                        {{-- Carbon::parse()を使用して正しい時刻フォーマットに変換 --}}
-                                        value="{{ old('after_clock_out') ?? \Carbon\Carbon::parse($formattedAttendance['raw_attendance']->clock_out)->format('H:i') }}"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                           id="after_clock_out"
+                                           name="after_clock_out"
+                                           value="{{ old('after_clock_out') ?? $formData['clock_out'] }}"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
                             </div>
                         </div>
 
-
                         {{-- 休憩時間修正用フィールド --}}
-                        <div id="break_time_fields" class="hidden">
+                        <div id="break_time_fields" class="{{ old('request_type') === 'break_time_modification' ? '' : 'hidden' }}">
                             <div>
                                 <label for="after_break_time" class="block text-sm font-medium text-gray-700">
                                     修正後の休憩時間
@@ -115,18 +118,10 @@
                                         （現在：{{ $formattedAttendance['break_time'] }}）
                                     </span>
                                 </label>
-                                @php
-                                    // 休憩時間を「HH:mm」形式に変換
-                                    $currentBreakTime = sprintf(
-                                        '%02d:%02d',
-                                        floor($formattedAttendance['raw_attendance']->break_time / 60),
-                                        $formattedAttendance['raw_attendance']->break_time % 60
-                                    );
-                                @endphp
                                 <input type="time"
                                        id="after_break_time"
                                        name="after_break_time"
-                                       value="{{ old('after_break_time') ?? $currentBreakTime }}"
+                                       value="{{ old('after_break_time') ?? $formData['break_time'] }}"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             </div>
                         </div>
@@ -134,8 +129,12 @@
                         {{-- 申請理由 --}}
                         <div>
                             <label for="reason" class="block text-sm font-medium text-gray-700">申請理由</label>
-                            <textarea id="reason" name="reason" rows="3" required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ old('reason') }}</textarea>
+                            <textarea id="reason"
+                                    name="reason"
+                                    rows="3"
+                                    required
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="修正理由を入力してください">{{ old('reason') }}</textarea>
                         </div>
 
                         {{-- 送信ボタン --}}
@@ -145,7 +144,7 @@
                                 キャンセル
                             </a>
                             <button type="submit"
-                                    class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+                                    class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                                 申請する
                             </button>
                         </div>
@@ -170,5 +169,10 @@
                 breakTimeFields.classList.remove('hidden');
             }
         }
+
+        // 初期表示時にも実行
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleInputFields();
+        });
     </script>
 </x-user-layout>
