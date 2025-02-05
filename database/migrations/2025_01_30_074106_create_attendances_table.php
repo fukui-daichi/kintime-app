@@ -12,49 +12,23 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('attendances', function (Blueprint $table) {
-            // 主キー
             $table->id();
-
-            // 外部キー：ユーザーテーブルとの紐付け
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            // constrained()：usersテーブルへの参照制約を自動設定
-            // cascadeOnDelete()：ユーザーが削除された場合、関連する勤怠記録も削除
-
-            // 勤務日（YYYY-MM-DD形式）
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->date('date');
-
-            // 出勤時刻（HH:MM:SS形式）
-            // nullable()：未打刻の場合はnullを許容
             $table->time('clock_in')->nullable();
-
-            // 退勤時刻（HH:MM:SS形式）
             $table->time('clock_out')->nullable();
-
-            // 休憩時間（分単位）
-            // default(60)：デフォルトで60分（1時間）を設定
-            $table->integer('break_time')->default(60);
-
-            // 実労働時間（分単位）
-            // 実労働時間 = 退勤時刻 - 出勤時刻 - 休憩時間
-            $table->integer('actual_work_time')->nullable();
-
-            // 残業時間（分単位）
-            // 所定労働時間（例：8時間）を超えた時間
-            $table->integer('overtime')->nullable();
-
-            // 深夜勤務時間（分単位）
-            // 22時から翌5時までの勤務時間
-            $table->integer('night_work_time')->nullable();
-
-            // 勤務状態
-            // working: 勤務中, left: 退勤済み
-            $table->enum('status', ['working', 'left'])->default('working');
-
-            // 備考欄
+            // 時間を分単位の整数で保存
+            $table->integer('break_time')->nullable()->comment('休憩時間（分）');
+            $table->integer('actual_work_time')->nullable()->comment('実労働時間（分）');
+            $table->integer('overtime')->nullable()->comment('残業時間（分）');
+            $table->integer('night_work_time')->nullable()->comment('深夜時間（分）');
+            $table->enum('status', ['working', 'left', 'pending_approval', 'approved'])->default('working');
             $table->text('note')->nullable();
-
-            // created_at, updated_atカラムを自動生成
             $table->timestamps();
+
+            // インデックスの追加
+            $table->index(['user_id', 'date']);
+            $table->index('status');
         });
     }
 
