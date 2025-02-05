@@ -4,6 +4,7 @@ namespace App\Services\ApprovalRequest;
 
 use App\Models\ApprovalRequest;
 use App\Models\Attendance;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -111,18 +112,92 @@ class ApprovalRequestService
     {
         try {
             return DB::transaction(function () use ($request) {
+                // デバッグログ（申請データの確認）
+                Log::debug('Approval Request Data:', [
+                    'attendance_date' => $request->attendance->date,
+                    'after_clock_in' => $request->after_clock_in,
+                    'after_clock_out' => $request->after_clock_out,
+                ]);
+
                 // 申請を承認状態に更新
                 $request->update([
                     'status' => 'approved'
                 ]);
 
-                // 勤怠データを修正内容で更新（statusの値を修正）
-                $request->attendance->update([
-                    'clock_in' => $request->after_clock_in,
-                    'clock_out' => $request->after_clock_out,
-                    'break_time' => $request->after_break_hours * 60,
-                    'status' => 'left'
+                // 勤怠データの更新
+                $attendance = $request->attendance;
+                $updateData = [];
+
+                // 時刻修正の申請の場合
+                if ($request->request_type === 'time_correction') {
+                    if ($request->after_clock_in) {
+                        try {
+                            // まず時刻部分だけを取り出す
+                            $timeOnly = Carbon::parse($request->after_clock_in)->format('H:i');
+                            // 日付と時刻を結合
+                            $updateData['clock_in'] = Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $timeOnly);
+                        } catch (\Exception $e) {
+                            Log::error('出勤時刻の変換エラー:', [
+                                'error' => $e->getMessage(),
+                                'input_time' => $request->after_clock_in,
+                                'extracted_time' => $timeOnly ?? null
+                            ]);
+                            throw $e;
+                        }
+                    }
+
+                    if ($request->after_clock_out) {
+                        try {
+                            // まず時刻部分だけを取り出す
+                            $timeOnly = Carbon::parse($request->after_clock_out)->format('H:i');
+                            // 日付と時刻を結合
+                            $updateData['clock_out'] = Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $timeOnly);
+                        } catch (\Exception $e) {
+                            Log::error('退勤時刻の変換エラー:', [
+                                'error' => $e->getMessage(),
+                                'input_time' => $request->after_clock_out,
+                                'extracted_time' => $timeOnly ?? null
+                            ]);
+                            throw $e;
+                        }
+                    }
+                }
+
+                // 休憩時間修正の申請の場合
+                if ($request->request_type === 'break_time_modification' && $request->after_break_time) {
+                    $updateData['break_time'] = $request->after_break_time;
+                }
+
+                // 実労働時間、残業時間、深夜時間を再計算
+                if (!empty($updateData)) {
+                    $clockIn = $updateData['clock_in'] ?? $attendance->clock_in;
+                    $clockOut = $updateData['clock_out'] ?? $attendance->clock_out;
+                    $breakTime = $updateData['break_time'] ?? $attendance->break_time;
+
+                    if ($clockIn && $clockOut) {
+                        $workMinutes = Carbon::parse($clockOut)->diffInMinutes(Carbon::parse($clockIn));
+                        $actualWorkMinutes = $workMinutes - $breakTime;
+
+                        $updateData['actual_work_time'] = $actualWorkMinutes;
+                        $updateData['overtime'] = max(0, $actualWorkMinutes - 480);
+                        $updateData['night_work_time'] = $this->calculateNightWorkMinutes(
+                            Carbon::parse($clockIn),
+                            Carbon::parse($clockOut)
+                        );
+                    }
+                }
+
+                // ステータスを更新
+                $updateData['status'] = 'left';
+
+                // デバッグ用ログ出力
+                Log::debug('Update Data:', [
+                    'attendance_id' => $attendance->id,
+                    'update_data' => $updateData,
                 ]);
+
+                // 勤怠データを更新
+                $attendance->update($updateData);
 
                 return true;
             });
@@ -130,6 +205,25 @@ class ApprovalRequestService
             Log::error('申請承認中にエラーが発生しました: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * 深夜時間を計算（22時〜5時の間の勤務時間）
+     */
+    private function calculateNightWorkMinutes(Carbon $clockIn, Carbon $clockOut): int
+    {
+        $nightWorkMinutes = 0;
+        $currentTime = $clockIn->copy();
+
+        while ($currentTime < $clockOut) {
+            $hour = (int)$currentTime->format('H');
+            if ($hour >= 22 || $hour < 5) {
+                $nightWorkMinutes++;
+            }
+            $currentTime->addMinute();
+        }
+
+        return $nightWorkMinutes;
     }
 
     /**
