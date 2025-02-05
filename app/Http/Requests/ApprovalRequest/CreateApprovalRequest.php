@@ -92,9 +92,24 @@ class CreateApprovalRequest extends FormRequest
         // any_timeフィールドを削除
         unset($validated['any_time']);
 
-        // 休憩時間が入力されている場合、分単位に変換
-        if (isset($validated['after_break_time'])) {
-            $validated['after_break_time'] = TimeFormatter::timeToMinutes($validated['after_break_time']);
+        // 対象の勤怠データを取得
+        $attendance = \App\Models\Attendance::find($validated['attendance_id']);
+
+        // 時刻修正の場合
+        if ($validated['request_type'] === 'time_correction') {
+            // 入力がない場合は元の値を使用
+            $validated['after_clock_in'] = $validated['after_clock_in']
+                ?? substr($attendance->clock_in, 0, 5);
+            $validated['after_clock_out'] = $validated['after_clock_out']
+                ?? substr($attendance->clock_out, 0, 5);
+        }
+
+        // 休憩時間修正の場合
+        if ($validated['request_type'] === 'break_time_modification') {
+            // 入力がない場合は元の値を使用（分単位で保存）
+            $validated['after_break_time'] = $validated['after_break_time']
+                ? TimeFormatter::timeToMinutes($validated['after_break_time'])
+                : $attendance->break_time;
         }
 
         // 申請データに必要な情報を追加
@@ -102,6 +117,10 @@ class CreateApprovalRequest extends FormRequest
             'user_id' => Auth::id(),
             'approver_id' => $this->getDefaultApproverId(),
             'status' => 'pending',
+            // 修正前の値を保存
+            'before_clock_in' => $attendance->clock_in,
+            'before_clock_out' => $attendance->clock_out,
+            'before_break_time' => $attendance->break_time,
         ]);
     }
 

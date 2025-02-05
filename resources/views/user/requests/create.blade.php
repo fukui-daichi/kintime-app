@@ -75,34 +75,58 @@
                                 <div>
                                     <label for="after_clock_in" class="block text-sm font-medium text-gray-700">
                                         修正後の出勤時刻
+                                        <span class="text-sm text-gray-500">
+                                            （現在：{{ $formattedAttendance['clock_in'] }}）
+                                        </span>
                                     </label>
-                                    <input type="time" id="after_clock_in" name="after_clock_in"
-                                           value="{{ old('after_clock_in') }}"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <input type="time"
+                                        id="after_clock_in"
+                                        name="after_clock_in"
+                                        {{-- Carbon::parse()を使用して正しい時刻フォーマットに変換 --}}
+                                        value="{{ old('after_clock_in') ?? \Carbon\Carbon::parse($formattedAttendance['raw_attendance']->clock_in)->format('H:i') }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
 
                                 {{-- 退勤時刻 --}}
                                 <div>
                                     <label for="after_clock_out" class="block text-sm font-medium text-gray-700">
                                         修正後の退勤時刻
+                                        <span class="text-sm text-gray-500">
+                                            （現在：{{ $formattedAttendance['clock_out'] }}）
+                                        </span>
                                     </label>
-                                    <input type="time" id="after_clock_out" name="after_clock_out"
-                                           value="{{ old('after_clock_out') }}"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <input type="time"
+                                        id="after_clock_out"
+                                        name="after_clock_out"
+                                        {{-- Carbon::parse()を使用して正しい時刻フォーマットに変換 --}}
+                                        value="{{ old('after_clock_out') ?? \Carbon\Carbon::parse($formattedAttendance['raw_attendance']->clock_out)->format('H:i') }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
                             </div>
                         </div>
+
 
                         {{-- 休憩時間修正用フィールド --}}
                         <div id="break_time_fields" class="hidden">
                             <div>
                                 <label for="after_break_time" class="block text-sm font-medium text-gray-700">
                                     修正後の休憩時間
+                                    <span class="text-sm text-gray-500">
+                                        （現在：{{ $formattedAttendance['break_time'] }}）
+                                    </span>
                                 </label>
+                                @php
+                                    // 休憩時間を「HH:mm」形式に変換
+                                    $currentBreakTime = sprintf(
+                                        '%02d:%02d',
+                                        floor($formattedAttendance['raw_attendance']->break_time / 60),
+                                        $formattedAttendance['raw_attendance']->break_time % 60
+                                    );
+                                @endphp
                                 <input type="time"
                                        id="after_break_time"
                                        name="after_break_time"
-                                       value="{{ old('after_break_time', '01:00') }}"
+                                       value="{{ old('after_break_time') ?? $currentBreakTime }}"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             </div>
                         </div>
