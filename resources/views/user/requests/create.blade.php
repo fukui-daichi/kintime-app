@@ -1,4 +1,3 @@
-{{-- ユーザーレイアウトを継承 --}}
 <x-user-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -97,11 +96,13 @@
                         {{-- 休憩時間修正用フィールド --}}
                         <div id="break_time_fields" class="hidden">
                             <div>
-                                <label for="after_break_hours" class="block text-sm font-medium text-gray-700">
+                                <label for="after_break_time" class="block text-sm font-medium text-gray-700">
                                     修正後の休憩時間
                                 </label>
-                                <input type="time" id="after_break_hours" name="after_break_hours"
-                                       value="{{ old('after_break_hours', '01:00') }}"
+                                <input type="time"
+                                       id="after_break_time"
+                                       name="after_break_time"
+                                       value="{{ old('after_break_time', '01:00') }}"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             </div>
                         </div>

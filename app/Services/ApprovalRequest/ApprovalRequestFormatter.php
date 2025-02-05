@@ -64,7 +64,11 @@ class ApprovalRequestFormatter
             'clock_out' => $request->{$prefix.'clock_out'}
                 ? Carbon::parse($request->{$prefix.'clock_out'})->format('H:i')
                 : null,
-            'break_hours' => $request->{$prefix.'break_hours'},
+            'break_time' => $request->{$prefix.'break_time'}
+                ? sprintf('%02d:%02d',
+                    floor($request->{$prefix.'break_time'} / 60),
+                    $request->{$prefix.'break_time'} % 60)
+                : null,
         ];
     }
 
@@ -98,8 +102,14 @@ class ApprovalRequestFormatter
             'clock_out' => $attendance->clock_out
                 ? Carbon::parse($attendance->clock_out)->format('H:i')
                 : '未打刻',
-            'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
-            'actual_work_time' => TimeFormatter::minutesToTime($attendance->actual_work_time),
+            'break_time' => $attendance->break_time
+                ? sprintf('%02d:%02d',
+                    floor($attendance->break_time / 60),
+                    $attendance->break_time % 60)
+                : '未設定',
+            'actual_work_time' => $attendance->actual_work_time
+                ? TimeFormatter::minutesToTime($attendance->actual_work_time)
+                : '未計算',
             'raw_attendance' => $attendance,
         ];
     }
