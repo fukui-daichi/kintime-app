@@ -56,8 +56,8 @@
                             <div class="mt-8 text-left max-w-xl mx-auto">
                                 <h3 class="text-lg font-semibold mb-4">本日の勤怠状況</h3>
                                 <div class="space-y-2">
-                                    <p>出勤時刻：{{ $attendanceData['clockInTime'] }}</p>
-                                    <p>退勤時刻：{{ $attendanceData['clockOutTime'] }}</p>
+                                    <p>出勤時刻：{{ $attendanceData['clockInTime'] ?? '未打刻' }}</p>
+                                    <p>退勤時刻：{{ $attendanceData['clockOutTime'] ?? '未打刻' }}</p>
                                     @if ($attendanceData['workTime'] !== null)
                                         <p>実働時間：{{ $attendanceData['workTime'] }}</p>
                                     @endif

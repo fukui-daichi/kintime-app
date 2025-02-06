@@ -278,8 +278,8 @@ class AttendanceService
     /**
      * 勤怠データを表示用にフォーマット
      *
-     * @param Attendance|null $attendance
-     * @return array
+     * @param Attendance|null $attendance 勤怠データ
+     * @return array フォーマット済みの勤怠データ
      */
     private function formatAttendanceData(?Attendance $attendance): array
     {
@@ -288,11 +288,21 @@ class AttendanceService
         }
 
         return [
-            'clockInTime' => TimeFormatter::formatTime(Carbon::parse($attendance->clock_in)),
-            'clockOutTime' => TimeFormatter::formatTime(Carbon::parse($attendance->clock_out)),
-            'workTime' => TimeFormatter::minutesToTime($attendance->actual_work_time),
-            'overtime' => TimeFormatter::minutesToTime($attendance->overtime),
-            'nightWorkTime' => TimeFormatter::minutesToTime($attendance->night_work_time),
+            'clockInTime' => $attendance->clock_in
+                ? TimeFormatter::formatTime(Carbon::parse($attendance->clock_in))
+                : null,
+            'clockOutTime' => $attendance->clock_out
+                ? TimeFormatter::formatTime(Carbon::parse($attendance->clock_out))
+                : null,
+            'workTime' => $attendance->actual_work_time
+                ? TimeFormatter::minutesToTime($attendance->actual_work_time)
+                : null,
+            'overtime' => $attendance->overtime
+                ? TimeFormatter::minutesToTime($attendance->overtime)
+                : null,
+            'nightWorkTime' => $attendance->night_work_time
+                ? TimeFormatter::minutesToTime($attendance->night_work_time)
+                : null,
         ];
     }
 
