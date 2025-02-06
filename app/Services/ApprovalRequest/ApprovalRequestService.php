@@ -3,7 +3,7 @@
 namespace App\Services\ApprovalRequest;
 
 use App\Models\ApprovalRequest;
-use App\Models\Attendance;
+use App\Models\Timecard;
 use App\Models\User;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
@@ -57,7 +57,7 @@ class ApprovalRequestService
      */
     private function buildBaseRequestQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return ApprovalRequest::with(['user', 'attendance', 'approver'])
+        return ApprovalRequest::with(['user', 'timecard', 'approver'])
             ->latest();
     }
 
@@ -120,7 +120,7 @@ class ApprovalRequestService
             'id' => $request->id,
             'created_at' => $this->formatDateTime($request->created_at),
             'user' => $this->formatUserData($request->user),
-            'attendance_date' => TimeFormatter::formatDate($request->attendance->date),
+            'timecard_date' => TimeFormatter::formatDate($request->timecard->date),
             'request_type' => $this->formatRequestType($request->request_type),
             'current_time' => $this->formatTimeData($request, 'before'),
             'requested_time' => $this->formatTimeData($request, 'after'),
@@ -255,7 +255,7 @@ class ApprovalRequestService
         try {
             return DB::transaction(function () use ($data) {
                 $request = ApprovalRequest::create($data);
-                $request->attendance->update(['status' => 'pending_approval']);
+                $request->timecard->update(['status' => 'pending_approval']);
                 return $request;
             });
         } catch (\Exception $e) {
@@ -276,8 +276,8 @@ class ApprovalRequestService
         try {
             DB::transaction(function () use ($request) {
                 $request->update(['status' => 'approved']);
-                $updateData = $this->prepareAttendanceUpdateData($request);
-                $request->attendance->update($updateData);
+                $updateData = $this->prepareTimecardUpdateData($request);
+                $request->timecard->update($updateData);
             });
 
             return true;
@@ -302,7 +302,7 @@ class ApprovalRequestService
         try {
             DB::transaction(function () use ($request) {
                 $request->update(['status' => 'rejected']);
-                $request->attendance->update(['status' => 'left']);
+                $request->timecard->update(['status' => 'left']);
             });
 
             return true;
@@ -318,13 +318,13 @@ class ApprovalRequestService
     /**
      * 勤怠データが修正申請可能か確認
      *
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @return bool
      */
-    public function canRequestModification(Attendance $attendance): bool
+    public function canRequestModification(Timecard $timecard): bool
     {
-        return !$attendance->hasPendingRequest() &&
-               $attendance->status !== 'pending_approval';
+        return !$timecard->hasPendingRequest() &&
+               $timecard->status !== 'pending_approval';
     }
 
     /************************************
@@ -337,9 +337,9 @@ class ApprovalRequestService
      * @param ApprovalRequest $request
      * @return array
      */
-    private function prepareAttendanceUpdateData(ApprovalRequest $request): array
+    private function prepareTimecardUpdateData(ApprovalRequest $request): array
     {
-        $attendance = $request->attendance;
+        $timecard = $request->timecard;
         $updateData = ['status' => 'left'];
 
         if ($request->request_type === 'time_correction') {
@@ -351,7 +351,7 @@ class ApprovalRequestService
             $updateData['break_time'] = $request->after_break_time;
         }
 
-        return $this->calculateWorkTimes($updateData, $attendance);
+        return $this->calculateWorkTimes($updateData, $timecard);
     }
 
     /**
@@ -363,7 +363,7 @@ class ApprovalRequestService
     private function prepareTimeCorrection(ApprovalRequest $request): array
     {
         $updateData = [];
-        $date = $request->attendance->date->format('Y-m-d');
+        $date = $request->timecard->date->format('Y-m-d');
 
         if ($request->after_clock_in) {
             $timeOnly = Carbon::parse($request->after_clock_in)->format('H:i');
@@ -382,15 +382,15 @@ class ApprovalRequestService
      * 勤務時間の計算処理
      *
      * @param array $updateData 更新データ
-     * @param Attendance $attendance 勤怠データ
+     * @param Timecard $timecard 勤怠データ
      * @return array 計算済みの更新データ
      */
-    private function calculateWorkTimes(array $updateData, Attendance $attendance): array
+    private function calculateWorkTimes(array $updateData, Timecard $timecard): array
     {
-        $date = $attendance->date->format('Y-m-d');
-        $clockIn = $this->getClockInTime($updateData, $attendance, $date);
-        $clockOut = $this->getClockOutTime($updateData, $attendance, $date);
-        $breakTime = $updateData['break_time'] ?? $attendance->break_time ?? WorkTimeConstants::DEFAULT_BREAK_MINUTES;
+        $date = $timecard->date->format('Y-m-d');
+        $clockIn = $this->getClockInTime($updateData, $timecard, $date);
+        $clockOut = $this->getClockOutTime($updateData, $timecard, $date);
+        $breakTime = $updateData['break_time'] ?? $timecard->break_time ?? WorkTimeConstants::DEFAULT_BREAK_MINUTES;
 
         if ($clockIn && $clockOut) {
             try {
@@ -408,16 +408,16 @@ class ApprovalRequestService
      * 出勤時刻を取得
      *
      * @param array $updateData
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @param string $date
      * @return Carbon|null
      */
-    private function getClockInTime(array $updateData, Attendance $attendance, string $date): ?Carbon
+    private function getClockInTime(array $updateData, Timecard $timecard, string $date): ?Carbon
     {
         return isset($updateData['clock_in'])
             ? $updateData['clock_in']
-            : ($attendance->clock_in
-                ? Carbon::parse($date . ' ' . $attendance->clock_in->format('H:i:s'))
+            : ($timecard->clock_in
+                ? Carbon::parse($date . ' ' . $timecard->clock_in->format('H:i:s'))
                 : null);
     }
 
@@ -425,16 +425,16 @@ class ApprovalRequestService
      * 退勤時刻を取得
      *
      * @param array $updateData
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @param string $date
      * @return Carbon|null
      */
-    private function getClockOutTime(array $updateData, Attendance $attendance, string $date): ?Carbon
+    private function getClockOutTime(array $updateData, Timecard $timecard, string $date): ?Carbon
     {
         return isset($updateData['clock_out'])
             ? $updateData['clock_out']
-            : ($attendance->clock_out
-                ? Carbon::parse($date . ' ' . $attendance->clock_out->format('H:i:s'))
+            : ($timecard->clock_out
+                ? Carbon::parse($date . ' ' . $timecard->clock_out->format('H:i:s'))
                 : null);
     }
 
@@ -558,21 +558,21 @@ class ApprovalRequestService
     /**
      * フォーム表示用のデータを整形して取得
      *
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @return array フォーム表示用のデータ
      */
-    public function getFormData(Attendance $attendance): array
+    public function getFormData(Timecard $timecard): array
     {
         return [
-            'currentAttendance' => $this->getCurrentAttendanceData($attendance),
-            'formData' => $this->getFormDefaultValues($attendance),
+            'currentTimecard' => $this->getCurrentTimecardData($timecard),
+            'formData' => $this->getFormDefaultValues($timecard),
             'requestTypes' => $this->getRequestTypeOptions(),
-            'formattedAttendance' => [
-                'id' => $attendance->id,
-                'clock_in' => TimeFormatter::formatTime($attendance->clock_in),
-                'clock_out' => TimeFormatter::formatTime($attendance->clock_out),
-                'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
-                'raw_attendance' => $attendance,
+            'formattedTimecard' => [
+                'id' => $timecard->id,
+                'clock_in' => TimeFormatter::formatTime($timecard->clock_in),
+                'clock_out' => TimeFormatter::formatTime($timecard->clock_out),
+                'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
+                'raw_timecard' => $timecard,
             ],
         ];
     }
@@ -580,37 +580,37 @@ class ApprovalRequestService
     /**
      * 現在の勤怠情報を取得
      *
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @return array
      */
-    private function getCurrentAttendanceData(Attendance $attendance): array
+    private function getCurrentTimecardData(Timecard $timecard): array
     {
         return [
-            'date' => TimeFormatter::formatDate($attendance->date, 'Y年m月d日'),
-            'clock_in' => $attendance->clock_in
-                ? TimeFormatter::formatTime($attendance->clock_in)
+            'date' => TimeFormatter::formatDate($timecard->date, 'Y年m月d日'),
+            'clock_in' => $timecard->clock_in
+                ? TimeFormatter::formatTime($timecard->clock_in)
                 : '未打刻',
-            'clock_out' => $attendance->clock_out
-                ? TimeFormatter::formatTime($attendance->clock_out)
+            'clock_out' => $timecard->clock_out
+                ? TimeFormatter::formatTime($timecard->clock_out)
                 : '未打刻',
-            'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
-            'actual_work_time' => TimeFormatter::minutesToTime($attendance->actual_work_time)
+            'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
+            'actual_work_time' => TimeFormatter::minutesToTime($timecard->actual_work_time)
         ];
     }
 
     /**
      * フォームのデフォルト値を取得
      *
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @return array
      */
-    private function getFormDefaultValues(Attendance $attendance): array
+    private function getFormDefaultValues(Timecard $timecard): array
     {
         return [
-            'attendance_id' => $attendance->id,
-            'clock_in' => $attendance->clock_in?->format('H:i'),
-            'clock_out' => $attendance->clock_out?->format('H:i'),
-            'break_time' => TimeFormatter::minutesToTime($attendance->break_time)
+            'timecard_id' => $timecard->id,
+            'clock_in' => $timecard->clock_in?->format('H:i'),
+            'clock_out' => $timecard->clock_out?->format('H:i'),
+            'break_time' => TimeFormatter::minutesToTime($timecard->break_time)
         ];
     }
 

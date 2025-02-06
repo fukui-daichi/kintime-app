@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Attendance;
+namespace App\Services\Timecard;
 
-use App\Models\Attendance;
+use App\Models\Timecard;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
 use Carbon\Carbon;
@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Log;
 /**
  * 勤怠管理の基本機能を担当するサービスクラス
  */
-class AttendanceService
+class TimecardService
 {
     private $monthlyService;
 
-    public function __construct(MonthlyAttendanceService $monthlyService)
+    public function __construct(MonthlyTimecardService $monthlyService)
     {
         $this->monthlyService = $monthlyService;
     }
@@ -28,7 +28,7 @@ class AttendanceService
      * @param string|null $month 月（nullの場合は現在月）
      * @return array 月別勤怠データ
      */
-    public function getMonthlyAttendanceData(int $userId, ?string $year = null, ?string $month = null): array
+    public function getMonthlyTimecardData(int $userId, ?string $year = null, ?string $month = null): array
     {
         return $this->monthlyService->getData($userId, $year, $month);
     }
@@ -38,21 +38,21 @@ class AttendanceService
      *
      * @param int $userId ユーザーID
      * @return array{
-     *   attendance: ?Attendance,
+     *   timecard: ?Timecard,
      *   canClockIn: bool,
      *   canClockOut: bool,
-     *   attendanceData: array
+     *   timecardData: array
      * }
      */
-    public function getDailyAttendanceData(int $userId): array
+    public function getDailyTimecardData(int $userId): array
     {
-        $attendance = $this->getTodayAttendance($userId);
+        $timecard = $this->getTodayTimecard($userId);
 
         return [
-            'attendance' => $attendance,
-            'canClockIn' => $this->canClockIn($attendance),
-            'canClockOut' => $this->canClockOut($attendance),
-            'attendanceData' => $this->formatAttendanceData($attendance),
+            'timecard' => $timecard,
+            'canClockIn' => $this->canClockIn($timecard),
+            'canClockOut' => $this->canClockOut($timecard),
+            'timecardData' => $this->formatTimecardData($timecard),
         ];
     }
 
@@ -64,12 +64,12 @@ class AttendanceService
      */
     public function clockIn(int $userId): array
     {
-        if ($this->hasTodayAttendance($userId)) {
+        if ($this->hasTodayTimecard($userId)) {
             return $this->createResponse(false, '本日はすでに出勤打刻されています。');
         }
 
         try {
-            $this->createAttendanceRecord($userId);
+            $this->createTimecardRecord($userId);
             return $this->createResponse(true, '出勤を記録しました。');
         } catch (\Exception $e) {
             Log::error('出勤打刻エラー', ['error' => $e->getMessage(), 'user_id' => $userId]);
@@ -85,14 +85,14 @@ class AttendanceService
      */
     public function clockOut(int $userId): array
     {
-        $attendance = $this->getTodayWorkingAttendance($userId);
+        $timecard = $this->getTodayWorkingTimecard($userId);
 
-        if (!$attendance) {
+        if (!$timecard) {
             return $this->createResponse(false, '本日の出勤記録が見つかりません。');
         }
 
         try {
-            $this->updateAttendanceForClockOut($attendance);
+            $this->updateTimecardForClockOut($timecard);
             return $this->createResponse(true, '退勤を記録しました。');
         } catch (\Exception $e) {
             Log::error('退勤打刻エラー', ['error' => $e->getMessage(), 'user_id' => $userId]);
@@ -104,13 +104,13 @@ class AttendanceService
      * 出勤記録を作成
      *
      * @param int $userId
-     * @return Attendance
+     * @return Timecard
      */
-    private function createAttendanceRecord(int $userId): Attendance
+    private function createTimecardRecord(int $userId): Timecard
     {
         $now = Carbon::now();
 
-        return Attendance::create([
+        return Timecard::create([
             'user_id' => $userId,
             'date' => $now->toDateString(),
             'clock_in' => $now->toTimeString(),
@@ -122,17 +122,17 @@ class AttendanceService
     /**
      * 退勤時の勤怠記録更新
      *
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @return bool
      */
-    private function updateAttendanceForClockOut(Attendance $attendance): bool
+    private function updateTimecardForClockOut(Timecard $timecard): bool
     {
-        $clockIn = Carbon::parse($attendance->clock_in);
+        $clockIn = Carbon::parse($timecard->clock_in);
         $clockOut = Carbon::now();
 
-        $workTimes = $this->calculateWorkTimes($clockIn, $clockOut, $attendance->break_time);
+        $workTimes = $this->calculateWorkTimes($clockIn, $clockOut, $timecard->break_time);
 
-        return $attendance->update(array_merge(
+        return $timecard->update(array_merge(
             $workTimes,
             [
                 'clock_out' => TimeFormatter::formatTime($clockOut),
@@ -217,11 +217,11 @@ class AttendanceService
      * 当日の勤怠記録を取得
      *
      * @param int $userId
-     * @return Attendance|null
+     * @return Timecard|null
      */
-    private function getTodayAttendance(int $userId): ?Attendance
+    private function getTodayTimecard(int $userId): ?Timecard
     {
-        return Attendance::where('user_id', $userId)
+        return Timecard::where('user_id', $userId)
             ->where('date', Carbon::now()->toDateString())
             ->first();
     }
@@ -230,11 +230,11 @@ class AttendanceService
      * 当日の作業中の勤怠記録を取得
      *
      * @param int $userId
-     * @return Attendance|null
+     * @return Timecard|null
      */
-    private function getTodayWorkingAttendance(int $userId): ?Attendance
+    private function getTodayWorkingTimecard(int $userId): ?Timecard
     {
-        return Attendance::where('user_id', $userId)
+        return Timecard::where('user_id', $userId)
             ->where('date', Carbon::now()->toDateString())
             ->where('status', 'working')
             ->first();
@@ -243,23 +243,23 @@ class AttendanceService
     /**
      * 出勤打刻が可能か判定
      *
-     * @param Attendance|null $attendance
+     * @param Timecard|null $timecard
      * @return bool
      */
-    private function canClockIn(?Attendance $attendance): bool
+    private function canClockIn(?Timecard $timecard): bool
     {
-        return !$attendance;
+        return !$timecard;
     }
 
     /**
      * 退勤打刻が可能か判定
      *
-     * @param Attendance|null $attendance
+     * @param Timecard|null $timecard
      * @return bool
      */
-    private function canClockOut(?Attendance $attendance): bool
+    private function canClockOut(?Timecard $timecard): bool
     {
-        return $attendance && $attendance->status === 'working';
+        return $timecard && $timecard->status === 'working';
     }
 
     /**
@@ -268,9 +268,9 @@ class AttendanceService
      * @param int $userId
      * @return bool
      */
-    private function hasTodayAttendance(int $userId): bool
+    private function hasTodayTimecard(int $userId): bool
     {
-        return Attendance::where('user_id', $userId)
+        return Timecard::where('user_id', $userId)
             ->where('date', Carbon::now()->toDateString())
             ->exists();
     }
@@ -278,30 +278,30 @@ class AttendanceService
     /**
      * 勤怠データを表示用にフォーマット
      *
-     * @param Attendance|null $attendance 勤怠データ
+     * @param Timecard|null $timecard 勤怠データ
      * @return array フォーマット済みの勤怠データ
      */
-    private function formatAttendanceData(?Attendance $attendance): array
+    private function formatTimecardData(?Timecard $timecard): array
     {
-        if (!$attendance) {
+        if (!$timecard) {
             return [];
         }
 
         return [
-            'clockInTime' => $attendance->clock_in
-                ? TimeFormatter::formatTime(Carbon::parse($attendance->clock_in))
+            'clockInTime' => $timecard->clock_in
+                ? TimeFormatter::formatTime(Carbon::parse($timecard->clock_in))
                 : null,
-            'clockOutTime' => $attendance->clock_out
-                ? TimeFormatter::formatTime(Carbon::parse($attendance->clock_out))
+            'clockOutTime' => $timecard->clock_out
+                ? TimeFormatter::formatTime(Carbon::parse($timecard->clock_out))
                 : null,
-            'workTime' => $attendance->actual_work_time
-                ? TimeFormatter::minutesToTime($attendance->actual_work_time)
+            'workTime' => $timecard->actual_work_time
+                ? TimeFormatter::minutesToTime($timecard->actual_work_time)
                 : null,
-            'overtime' => $attendance->overtime
-                ? TimeFormatter::minutesToTime($attendance->overtime)
+            'overtime' => $timecard->overtime
+                ? TimeFormatter::minutesToTime($timecard->overtime)
                 : null,
-            'nightWorkTime' => $attendance->night_work_time
-                ? TimeFormatter::minutesToTime($attendance->night_work_time)
+            'nightWorkTime' => $timecard->night_work_time
+                ? TimeFormatter::minutesToTime($timecard->night_work_time)
                 : null,
         ];
     }

@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
-use App\Models\Attendance;
+use App\Models\Timecard;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Carbon\Carbon;
 
@@ -20,11 +20,11 @@ class ApprovalRequestFactory extends Factory
     public function definition(): array
     {
         // 既存の勤怠データを取得（ない場合は新規作成）
-        $attendance = Attendance::factory()->create();
+        $timecard = Timecard::factory()->create();
 
         // 修正前の時間を勤怠データから取得
-        $beforeClockIn = $attendance->clock_in ? Carbon::parse($attendance->clock_in) : null;
-        $beforeClockOut = $attendance->clock_out ? Carbon::parse($attendance->clock_out) : null;
+        $beforeClockIn = $timecard->clock_in ? Carbon::parse($timecard->clock_in) : null;
+        $beforeClockOut = $timecard->clock_out ? Carbon::parse($timecard->clock_out) : null;
 
         // 修正後の時間を生成（±30分の範囲でランダム）
         $afterClockIn = $beforeClockIn
@@ -38,9 +38,9 @@ class ApprovalRequestFactory extends Factory
         $breakTimeOptions = [30, 60, 90];
 
         return [
-            'user_id' => $attendance->user_id,
+            'user_id' => $timecard->user_id,
             'approver_id' => User::factory()->state(['user_type' => 'admin']),
-            'attendance_id' => $attendance->id,
+            'timecard_id' => $timecard->id,
             'request_type' => fake()->randomElement(['time_correction', 'break_time_modification']),
             'before_clock_in' => $beforeClockIn,
             'before_clock_out' => $beforeClockOut,

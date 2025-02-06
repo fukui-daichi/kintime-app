@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Attendance;
+namespace App\Services\Timecard;
 
-use App\Models\Attendance;
+use App\Models\Timecard;
 use App\Helpers\TimeFormatter;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * 月次勤怠データの取得と加工を担当するサービスクラス
  */
-class MonthlyAttendanceService
+class MonthlyTimecardService
 {
     /**
      * 月別勤怠一覧画面用のデータを取得
@@ -20,7 +20,7 @@ class MonthlyAttendanceService
      * @param string|null $year 年（nullの場合は現在年）
      * @param string|null $month 月（nullの場合は現在月）
      * @return array{
-     *   attendances: Collection,
+     *   timecards: Collection,
      *   targetDate: Carbon,
      *   previousMonth: Carbon,
      *   nextMonth: Carbon,
@@ -35,7 +35,7 @@ class MonthlyAttendanceService
         $currentDate = now()->startOfMonth();
 
         return [
-            'attendances' => $this->getMonthlyAttendance($userId, $targetDate),
+            'timecards' => $this->getMonthlyTimecard($userId, $targetDate),
             'targetDate' => $targetDate,
             'previousMonth' => $targetDate->copy()->subMonth(),
             'nextMonth' => $targetDate->copy()->addMonth(),
@@ -52,16 +52,16 @@ class MonthlyAttendanceService
      * @param Carbon $targetDate 対象年月
      * @return Collection
      */
-    private function getMonthlyAttendance(int $userId, Carbon $targetDate): Collection
+    private function getMonthlyTimecard(int $userId, Carbon $targetDate): Collection
     {
         // 月の範囲を設定
         $dateRange = $this->getMonthDateRange($targetDate);
 
         // DBから勤怠データを取得
-        $attendances = $this->fetchAttendanceData($userId, $dateRange);
+        $timecards = $this->fetchTimecardData($userId, $dateRange);
 
         // カレンダーデータを生成
-        return $this->generateCalendarData($dateRange['start'], $dateRange['end'], $attendances);
+        return $this->generateCalendarData($dateRange['start'], $dateRange['end'], $timecards);
     }
 
     /**
@@ -85,16 +85,16 @@ class MonthlyAttendanceService
      * @param array{start: Carbon, end: Carbon} $dateRange
      * @return Collection
      */
-    private function fetchAttendanceData(int $userId, array $dateRange): Collection
+    private function fetchTimecardData(int $userId, array $dateRange): Collection
     {
-        return Attendance::where('user_id', $userId)
+        return Timecard::where('user_id', $userId)
             ->whereBetween('date', [
                 $dateRange['start']->toDateString(),
                 $dateRange['end']->toDateString()
             ])
             ->orderBy('date')
             ->get()
-            ->keyBy(fn($attendance) => $attendance->date->format('Y-m-d'));
+            ->keyBy(fn($timecard) => $timecard->date->format('Y-m-d'));
     }
 
     /**
@@ -102,22 +102,22 @@ class MonthlyAttendanceService
      *
      * @param Carbon $startDate
      * @param Carbon $endDate
-     * @param Collection $attendances
+     * @param Collection $timecards
      * @return Collection
      */
     private function generateCalendarData(
         Carbon $startDate,
         Carbon $endDate,
-        Collection $attendances
+        Collection $timecards
     ): Collection {
         $result = collect();
         $currentDate = $startDate->copy();
 
         while ($currentDate <= $endDate) {
             $dateKey = $currentDate->format('Y-m-d');
-            $attendance = $attendances->get($dateKey);
+            $timecard = $timecards->get($dateKey);
 
-            $result->push($this->formatDayData($currentDate, $attendance));
+            $result->push($this->formatDayData($currentDate, $timecard));
             $currentDate->addDay();
         }
 
@@ -128,20 +128,20 @@ class MonthlyAttendanceService
      * 日付データを整形
      *
      * @param Carbon $date
-     * @param Attendance|null $attendance
+     * @param Timecard|null $timecard
      * @return array
      */
-    private function formatDayData(Carbon $date, ?Attendance $attendance): array
+    private function formatDayData(Carbon $date, ?Timecard $timecard): array
     {
         return [
             'date' => $date->copy(),
-            'attendance' => $attendance,
+            'timecard' => $timecard,
             'is_weekend' => $date->isWeekend(),
-            'clock_in' => $attendance ? TimeFormatter::formatTime($attendance->clock_in) : null,
-            'clock_out' => $attendance ? TimeFormatter::formatTime($attendance->clock_out) : null,
-            'work_time' => $attendance ? TimeFormatter::minutesToTime($attendance->actual_work_time) : null,
-            'overtime' => $attendance ? TimeFormatter::minutesToTime($attendance->overtime) : null,
-            'night_work_time' => $attendance ? TimeFormatter::minutesToTime($attendance->night_work_time) : null,
+            'clock_in' => $timecard ? TimeFormatter::formatTime($timecard->clock_in) : null,
+            'clock_out' => $timecard ? TimeFormatter::formatTime($timecard->clock_out) : null,
+            'work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->actual_work_time) : null,
+            'overtime' => $timecard ? TimeFormatter::minutesToTime($timecard->overtime) : null,
+            'night_work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->night_work_time) : null,
         ];
     }
 

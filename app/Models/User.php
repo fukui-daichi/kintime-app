@@ -34,9 +34,9 @@ class User extends Authenticatable
     ];
 
     // 勤怠データとのリレーション
-    public function attendances()
+    public function timecards()
     {
-        return $this->hasMany(Attendance::class);
+        return $this->hasMany(Timecard::class);
     }
 
     // フルネーム取得用のアクセサ

@@ -3,11 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Attendance;
+use App\Models\Timecard;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
-class AttendanceSeeder extends Seeder
+class TimecardSeeder extends Seeder
 {
     /** 所定労働時間（分） */
     private const REGULAR_WORK_MINUTES = 480; // 8時間 = 480分
@@ -57,7 +57,7 @@ class AttendanceSeeder extends Seeder
                 // 深夜時間の計算（22時〜5時）
                 $nightWorkMinutes = $this->calculateNightWorkMinutes($clockIn, $clockOut);
 
-                Attendance::create([
+                Timecard::create([
                     'user_id' => $user->id,
                     'date' => $date->format('Y-m-d'),
                     'clock_in' => $clockIn->format('H:i:s'),
@@ -71,8 +71,8 @@ class AttendanceSeeder extends Seeder
             }
 
             // 本日分のデータ作成
-            if (!$user->attendances()->whereDate('date', Carbon::today())->exists()) {
-                Attendance::create([
+            if (!$user->Timecards()->whereDate('date', Carbon::today())->exists()) {
+                Timecard::create([
                     'user_id' => $user->id,
                     'date' => Carbon::today(),
                     'clock_in' => '09:00:00',

@@ -17,7 +17,7 @@ class CreateApprovalRequest extends FormRequest
         // Log::info('All Input:', $this->all());
 
         $rules = [
-            'attendance_id' => 'required|exists:attendances,id',
+            'timecard_id' => 'required|exists:timecards,id',
             'request_type' => 'required|in:time_correction,break_time_modification',
             'reason' => 'required|string|max:500',
         ];
@@ -68,8 +68,8 @@ class CreateApprovalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'attendance_id.required' => '勤怠データが選択されていません',
-            'attendance_id.exists' => '選択された勤怠データは存在しません',
+            'timecard_id.required' => '勤怠データが選択されていません',
+            'timecard_id.exists' => '選択された勤怠データは存在しません',
             'request_type.required' => '申請種別を選択してください',
             'request_type.in' => '無効な申請種別です',
             'after_clock_in.date_format' => '出勤時刻は HH:mm 形式で入力してください',
@@ -93,15 +93,15 @@ class CreateApprovalRequest extends FormRequest
         unset($validated['any_time']);
 
         // 対象の勤怠データを取得
-        $attendance = \App\Models\Attendance::find($validated['attendance_id']);
+        $timecard = \App\Models\Timecard::find($validated['timecard_id']);
 
         // 時刻修正の場合
         if ($validated['request_type'] === 'time_correction') {
             // 入力がない場合は元の値を使用
             $validated['after_clock_in'] = $validated['after_clock_in']
-                ?? substr($attendance->clock_in, 0, 5);
+                ?? substr($timecard->clock_in, 0, 5);
             $validated['after_clock_out'] = $validated['after_clock_out']
-                ?? substr($attendance->clock_out, 0, 5);
+                ?? substr($timecard->clock_out, 0, 5);
         }
 
         // 休憩時間修正の場合
@@ -109,7 +109,7 @@ class CreateApprovalRequest extends FormRequest
             // 入力がない場合は元の値を使用（分単位で保存）
             $validated['after_break_time'] = $validated['after_break_time']
                 ? TimeFormatter::timeToMinutes($validated['after_break_time'])
-                : $attendance->break_time;
+                : $timecard->break_time;
         }
 
         // 申請データに必要な情報を追加
@@ -118,9 +118,9 @@ class CreateApprovalRequest extends FormRequest
             'approver_id' => $this->getDefaultApproverId(),
             'status' => 'pending',
             // 修正前の値を保存
-            'before_clock_in' => $attendance->clock_in,
-            'before_clock_out' => $attendance->clock_out,
-            'before_break_time' => $attendance->break_time,
+            'before_clock_in' => $timecard->clock_in,
+            'before_clock_out' => $timecard->clock_out,
+            'before_break_time' => $timecard->break_time,
         ]);
     }
 

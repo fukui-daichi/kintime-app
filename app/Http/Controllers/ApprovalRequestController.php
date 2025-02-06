@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ApprovalRequest\CreateApprovalRequest;
 use App\Models\ApprovalRequest;
-use App\Models\Attendance;
+use App\Models\Timecard;
 use App\Http\Requests\ApprovalRequest\StoreApprovalRequest;
 use App\Http\Requests\ApprovalRequest\UpdateApprovalRequest;
 use App\Http\Requests\ApprovalRequest\RejectApprovalRequest;
@@ -68,18 +68,18 @@ class ApprovalRequestController extends Controller
     /**
      * 申請作成フォームを表示
      *
-     * @param Attendance $attendance
+     * @param Timecard $timecard
      * @return View|RedirectResponse
      */
-    public function create(Attendance $attendance)
+    public function create(Timecard $timecard)
     {
         // 申請可能か確認
-        if (!$this->approvalRequestService->canRequestModification($attendance)) {
+        if (!$this->approvalRequestService->canRequestModification($timecard)) {
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
         // フォームデータを取得
-        $viewData = $this->approvalRequestService->getFormData($attendance);
+        $viewData = $this->approvalRequestService->getFormData($timecard);
 
         return view('user.requests.create', $viewData);
     }

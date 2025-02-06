@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\TimecardController;
 use App\Http\Controllers\ApprovalRequestController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
@@ -20,10 +20,10 @@ Route::middleware('auth')->group(function () {
     });
 
     // 勤怠関連
-    Route::prefix('attendance')->name('attendance.')->group(function () {
-        Route::get('/', [AttendanceController::class, 'monthly'])->name('monthly');
-        Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('clockIn');
-        Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('clockOut');
+    Route::prefix('timecard')->name('timecard.')->group(function () {
+        Route::get('/', [TimecardController::class, 'monthly'])->name('monthly');
+        Route::post('/clock-in', [TimecardController::class, 'clockIn'])->name('clockIn');
+        Route::post('/clock-out', [TimecardController::class, 'clockOut'])->name('clockOut');
     });
 
     // 申請関連のルート
@@ -32,7 +32,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ApprovalRequestController::class, 'index'])->name('index');
 
         // 一般ユーザー用のルート
-        Route::get('/create/{attendance}', [ApprovalRequestController::class, 'create'])->name('create');
+        Route::get('/create/{timecard}', [ApprovalRequestController::class, 'create'])->name('create');
         Route::post('/', [ApprovalRequestController::class, 'store'])->name('store');
 
         // 管理者用のルート

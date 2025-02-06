@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Carbon\Carbon;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Attendance>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Timecard>
  */
-class AttendanceFactory extends Factory
+class TimecardFactory extends Factory
 {
     /**
      * Define the model's default state.

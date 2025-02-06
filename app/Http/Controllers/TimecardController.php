@@ -2,33 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Attendance\AttendanceService;
+use App\Services\Timecard\TimecardService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
-class AttendanceController extends Controller
+class TimecardController extends Controller
 {
     // サービスクラスのプロパティを定義
-    private $attendanceService;
+    private $timecardService;
 
-    public function __construct(AttendanceService $attendanceService)
+    public function __construct(TimecardService $timecardService)
     {
-        // AttendanceServiceのインスタンスを受け取り、プロパティに保存
-        $this->attendanceService = $attendanceService;
+        // TimecardServiceのインスタンスを受け取り、プロパティに保存
+        $this->timecardService = $timecardService;
     }
 
     // 勤怠画面表示用メソッド
     public function index()
     {
-        $attendanceData = $this->attendanceService->getDailyAttendanceData(Auth::id());
-        return view('user.index', $attendanceData);
+        $timecardData = $this->timecardService->getDailyTimecardData(Auth::id());
+        return view('user.index', $timecardData);
     }
 
     // 出勤打刻処理メソッド
     public function clockIn()
     {
         // サービスクラスの出勤処理を実行
-        $result = $this->attendanceService->clockIn(Auth::id());
+        $result = $this->timecardService->clockIn(Auth::id());
 
         // 処理結果に応じてフラッシュメッセージを設定し、前のページに戻る
         return back()->with(
@@ -41,7 +41,7 @@ class AttendanceController extends Controller
     public function clockOut()
     {
         // サービスクラスの退勤処理を実行
-        $result = $this->attendanceService->clockOut(Auth::id());
+        $result = $this->timecardService->clockOut(Auth::id());
 
         // 処理結果に応じてフラッシュメッセージを設定し、前のページに戻る
         return back()->with(
@@ -56,8 +56,8 @@ class AttendanceController extends Controller
     public function monthly(Request $request)
     {
         // サービスから必要なデータを取得してビューに渡すだけにする
-        return view('user.attendance.monthly',
-            $this->attendanceService->getMonthlyAttendanceData(
+        return view('user.timecard.monthly',
+            $this->timecardService->getMonthlyTimecardData(
                 Auth::id(),
                 $request->query('year'),
                 $request->query('month')

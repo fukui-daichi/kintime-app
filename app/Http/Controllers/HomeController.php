@@ -7,11 +7,11 @@ use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
-    private $attendanceController;
+    private $timecardController;
 
-    public function __construct(AttendanceController $attendanceController)
+    public function __construct(TimecardController $timecardController)
     {
-        $this->attendanceController = $attendanceController;
+        $this->timecardController = $timecardController;
     }
 
     /**
@@ -27,6 +27,6 @@ class HomeController extends Controller
         // ユーザー種別に応じて表示を分岐
         return Auth::user()->user_type === 'admin'
             ? view('admin.index')
-            : $this->attendanceController->index();
+            : $this->timecardController->index();
     }
 }

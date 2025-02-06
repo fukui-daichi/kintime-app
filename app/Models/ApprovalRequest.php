@@ -18,7 +18,7 @@ class ApprovalRequest extends Model
     protected $fillable = [
         'user_id',          // 申請者ID
         'approver_id',      // 承認者ID
-        'attendance_id',    // 対象の勤怠ID
+        'timecard_id',    // 対象の勤怠ID
         'request_type',     // 申請種別
         'before_clock_in',  // 修正前出勤時間
         'before_clock_out', // 修正前退勤時間
@@ -64,8 +64,8 @@ class ApprovalRequest extends Model
     /**
      * 勤怠記録のリレーション
      */
-    public function attendance(): BelongsTo
+    public function timecard(): BelongsTo
     {
-        return $this->belongsTo(Attendance::class);
+        return $this->belongsTo(Timecard::class);
     }
 }

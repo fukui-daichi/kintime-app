@@ -30,7 +30,7 @@
 
                         {{-- 打刻ボタン --}}
                         <div class="space-x-4">
-                            <form action="{{ route('attendance.clockIn') }}" method="POST" class="inline">
+                            <form action="{{ route('timecard.clockIn') }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit"
                                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded
@@ -40,7 +40,7 @@
                                 </button>
                             </form>
 
-                            <form action="{{ route('attendance.clockOut') }}" method="POST" class="inline">
+                            <form action="{{ route('timecard.clockOut') }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit"
                                     class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded
@@ -52,14 +52,14 @@
                         </div>
 
                         {{-- 本日の勤怠状況 --}}
-                        @if ($attendance)
+                        @if ($timecard)
                             <div class="mt-8 text-left max-w-xl mx-auto">
                                 <h3 class="text-lg font-semibold mb-4">本日の勤怠状況</h3>
                                 <div class="space-y-2">
-                                    <p>出勤時刻：{{ $attendanceData['clockInTime'] ?? '未打刻' }}</p>
-                                    <p>退勤時刻：{{ $attendanceData['clockOutTime'] ?? '未打刻' }}</p>
-                                    @if ($attendanceData['workTime'] !== null)
-                                        <p>実働時間：{{ $attendanceData['workTime'] }}</p>
+                                    <p>出勤時刻：{{ $timecardData['clockInTime'] ?? '未打刻' }}</p>
+                                    <p>退勤時刻：{{ $timecardData['clockOutTime'] ?? '未打刻' }}</p>
+                                    @if ($timecardData['workTime'] !== null)
+                                        <p>実働時間：{{ $timecardData['workTime'] }}</p>
                                     @endif
                                 </div>
                             </div>

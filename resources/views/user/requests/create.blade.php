@@ -18,26 +18,26 @@
                                 <div class="col-span-4">
                                     <span class="text-sm text-gray-500">日付</span>
                                     <p class="text-gray-900 text-lg font-medium">
-                                        {{ $currentAttendance['date'] }}
+                                        {{ $currentTimecard['date'] }}
                                     </p>
                                 </div>
 
                                 {{-- 勤怠情報 --}}
                                 <div>
                                     <span class="text-sm text-gray-500">出勤時刻</span>
-                                    <p class="text-gray-900">{{ $currentAttendance['clock_in'] }}</p>
+                                    <p class="text-gray-900">{{ $currentTimecard['clock_in'] }}</p>
                                 </div>
                                 <div>
                                     <span class="text-sm text-gray-500">退勤時刻</span>
-                                    <p class="text-gray-900">{{ $currentAttendance['clock_out'] }}</p>
+                                    <p class="text-gray-900">{{ $currentTimecard['clock_out'] }}</p>
                                 </div>
                                 <div>
                                     <span class="text-sm text-gray-500">休憩時間</span>
-                                    <p class="text-gray-900">{{ $currentAttendance['break_time'] }}</p>
+                                    <p class="text-gray-900">{{ $currentTimecard['break_time'] }}</p>
                                 </div>
                                 <div>
                                     <span class="text-sm text-gray-500">実労働時間</span>
-                                    <p class="text-gray-900">{{ $currentAttendance['actual_work_time'] }}</p>
+                                    <p class="text-gray-900">{{ $currentTimecard['actual_work_time'] }}</p>
                                 </div>
                             </div>
                         </div>
@@ -58,7 +58,7 @@
                     <form method="POST" action="{{ route('requests.store') }}" class="space-y-6">
                         @csrf
                         {{-- 勤怠IDを隠しフィールドとして送信 --}}
-                        <input type="hidden" name="attendance_id" value="{{ $formData['attendance_id'] }}">
+                        <input type="hidden" name="timecard_id" value="{{ $formData['timecard_id'] }}">
 
                         {{-- 申請種別の選択 --}}
                         <div>
@@ -82,7 +82,7 @@
                                     <label for="after_clock_in" class="block text-sm font-medium text-gray-700">
                                         修正後の出勤時刻
                                         <span class="text-sm text-gray-500">
-                                            （現在：{{ $formattedAttendance['clock_in'] }}）
+                                            （現在：{{ $formattedTimecard['clock_in'] }}）
                                         </span>
                                     </label>
                                     <input type="time"
@@ -97,7 +97,7 @@
                                     <label for="after_clock_out" class="block text-sm font-medium text-gray-700">
                                         修正後の退勤時刻
                                         <span class="text-sm text-gray-500">
-                                            （現在：{{ $formattedAttendance['clock_out'] }}）
+                                            （現在：{{ $formattedTimecard['clock_out'] }}）
                                         </span>
                                     </label>
                                     <input type="time"
@@ -115,7 +115,7 @@
                                 <label for="after_break_time" class="block text-sm font-medium text-gray-700">
                                     修正後の休憩時間
                                     <span class="text-sm text-gray-500">
-                                        （現在：{{ $formattedAttendance['break_time'] }}）
+                                        （現在：{{ $formattedTimecard['break_time'] }}）
                                     </span>
                                 </label>
                                 <input type="time"
@@ -139,7 +139,7 @@
 
                         {{-- 送信ボタン --}}
                         <div class="flex justify-end space-x-4">
-                            <a href="{{ route('attendance.monthly') }}"
+                            <a href="{{ route('timecard.monthly') }}"
                                class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                                 キャンセル
                             </a>

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('approver_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('attendance_id')->constrained()->onDelete('cascade');
+            $table->foreignId('timecard_id')->constrained()->onDelete('cascade');
             $table->enum('request_type', ['time_correction', 'break_time_modification']);
             $table->time('before_clock_in')->nullable();
             $table->time('before_clock_out')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             // インデックスの追加
             $table->index(['user_id', 'status']);
             $table->index(['approver_id', 'status']);
-            $table->index('attendance_id');
+            $table->index('timecard_id');
         });
     }
 

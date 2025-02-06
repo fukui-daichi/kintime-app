@@ -21,7 +21,7 @@ class StoreApprovalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'attendance_id' => 'required|exists:attendances,id',
+            'timecard_id' => 'required|exists:timecards,id',
             'request_type' => 'required|in:time_correction,break_time_modification',
             // 時刻修正の場合は、出勤時刻と退勤時刻のどちらかが必須
             'after_clock_in' => [
@@ -54,8 +54,8 @@ class StoreApprovalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'attendance_id.required' => '勤怠データが選択されていません',
-            'attendance_id.exists' => '選択された勤怠データは存在しません',
+            'timecard_id.required' => '勤怠データが選択されていません',
+            'timecard_id.exists' => '選択された勤怠データは存在しません',
             'request_type.required' => '申請種別が選択されていません',
             'request_type.in' => '無効な申請種別です',
             'after_clock_in.required_without_all' => '出勤時刻または退勤時刻のいずれかを入力してください',

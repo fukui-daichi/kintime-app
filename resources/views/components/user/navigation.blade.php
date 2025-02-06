@@ -13,7 +13,7 @@
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="'/'" :active="request()->is('/')">マイページ</x-nav-link>
-                    <x-nav-link :href="'/attendance'" :active="request()->is('attendance')">勤怠一覧</x-nav-link>
+                    <x-nav-link :href="'/timecard'" :active="request()->is('timecard')">勤怠一覧</x-nav-link>
                     <x-nav-link :href="'/requests'" :active="request()->is('requests')">申請一覧</x-nav-link>
                 </div>
             </div>
@@ -68,7 +68,7 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="'/'" :active="request()->is('/')">マイページ</x-responsive-nav-link>
-            <x-responsive-nav-link :href="'/attendance'" :active="request()->is('attendance')">勤怠一覧</x-responsive-nav-link>
+            <x-responsive-nav-link :href="'/timecard'" :active="request()->is('timecard')">勤怠一覧</x-responsive-nav-link>
             <x-responsive-nav-link :href="'/requests'" :active="request()->is('requests')">申請一覧</x-responsive-nav-link>
         </div>
 
