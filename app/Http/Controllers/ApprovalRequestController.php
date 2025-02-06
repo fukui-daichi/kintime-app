@@ -51,21 +51,15 @@ class ApprovalRequestController extends Controller
 
         if ($user->user_type === 'admin') {
             // 管理者の場合
-            $result = $this->approvalRequestService->getFilteredRequests($currentStatus);
-            $requests = $result['requests'];
-            $paginator = $result['paginator'];
-            $view = 'admin.requests.index';
+            $result = $this->approvalRequestService->getAllRequestList($currentStatus);
         } else {
             // 一般ユーザーの場合
-            $result = $this->approvalRequestService->getUserRequests($user->id, $currentStatus);
-            $requests = $result['requests'];
-            $paginator = $result['paginator'];
-            $view = 'user.requests.index';
+            $result = $this->approvalRequestService->getPersonalRequestList($user->id, $currentStatus);
         }
 
-        return view($view, [
-            'requests' => $requests,
-            'paginator' => $paginator,
+        return view($user->user_type === 'admin' ? 'admin.requests.index' : 'user.requests.index', [
+            'requests' => $result['requests'],
+            'paginator' => $result['paginator'],
             'statusList' => ApprovalRequestConstants::STATUS_LIST,
             'currentStatus' => $currentStatus,
         ]);

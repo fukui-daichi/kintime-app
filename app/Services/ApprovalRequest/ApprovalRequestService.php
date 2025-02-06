@@ -4,6 +4,7 @@ namespace App\Services\ApprovalRequest;
 
 use App\Models\ApprovalRequest;
 use App\Models\Attendance;
+use App\Models\User;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
 use App\Constants\ApprovalRequestConstants;
@@ -17,80 +18,44 @@ use Illuminate\Support\Facades\Log;
  */
 class ApprovalRequestService
 {
+    /************************************
+     * 申請一覧の取得関連
+     ************************************/
+
     /**
-     * 指定したユーザーの申請一覧を取得（フィルタリングとページネーション対応）
+     * 自分の申請一覧を取得
      *
      * @param int $userId ユーザーID
      * @param string|null $status フィルター用ステータス
-     * @return array 整形済みの申請一覧とページネーション情報
+     * @return array{requests: array, paginator: LengthAwarePaginator}
      */
-    public function getUserRequests(int $userId, ?string $status = null): array
+    public function getPersonalRequestList(int $userId, ?string $status = null): array
     {
-        // クエリの構築
-        $query = ApprovalRequest::with(['attendance', 'approver'])
+        $query = $this->buildBaseRequestQuery()
             ->where('user_id', $userId);
 
-        // ステータスフィルターの適用
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
-        // ページネーションの取得
-        $paginator = $query->latest()
-            ->paginate(ApprovalRequestConstants::PER_PAGE);
-
-        // 申請データを整形
-        $formattedRequests = [];
-        foreach ($paginator as $request) {
-            $formattedRequests[] = $this->formatRequestData($request);
-        }
-
-        // 整形したデータとページネーション情報を返す
-        return [
-            'requests' => $formattedRequests,
-            'paginator' => $paginator
-        ];
+        return $this->getRequestListWithPagination($query, $status);
     }
 
     /**
-     * ステータスでフィルタリングした申請一覧を取得
+     * 全ての申請一覧を取得（管理者用）
      *
-     * @param string|null $status フィルタリングするステータス
-     * @return array{requests: array, paginator: LengthAwarePaginator} フォーマット済みの申請一覧とページネーション情報
+     * @param string|null $status フィルター用ステータス
+     * @return array{requests: array, paginator: LengthAwarePaginator}
      */
-    public function getFilteredRequests(?string $status = null): array
+    public function getAllRequestList(?string $status = null): array
     {
-        // クエリの構築
-        $query = ApprovalRequest::with(['user', 'attendance', 'approver']);
+        $query = $this->buildBaseRequestQuery();
 
-        // ステータスフィルターの適用
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
-        // ページネーションの取得
-        $paginator = $query->latest()
-            ->paginate(ApprovalRequestConstants::PER_PAGE);
-
-        // 申請データを整形
-        $formattedRequests = [];
-        foreach ($paginator as $request) {
-            $formattedRequests[] = $this->formatRequestData($request);
-        }
-
-        // 整形したデータとページネーション情報を返す
-        return [
-            'requests' => $formattedRequests,
-            'paginator' => $paginator
-        ];
+        return $this->getRequestListWithPagination($query, $status);
     }
 
     /**
-     * 申請一覧の基本クエリを作成
+     * 申請の基本クエリを構築
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    private function createBaseQuery(): \Illuminate\Database\Eloquent\Builder
+    private function buildBaseRequestQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return ApprovalRequest::with(['user', 'attendance', 'approver'])
             ->latest();
@@ -106,11 +71,8 @@ class ApprovalRequestService
     private function applyStatusFilter(
         \Illuminate\Database\Eloquent\Builder $query,
         ?string $status
-    ): \Illuminate\Database\Eloquent\Builder
-    {
-        $status = $status ?? ApprovalRequestConstants::DEFAULT_STATUS;
-
-        if ($status !== 'all') {
+    ): \Illuminate\Database\Eloquent\Builder {
+        if ($status && $status !== 'all') {
             $query->where('status', $status);
         }
 
@@ -118,17 +80,168 @@ class ApprovalRequestService
     }
 
     /**
-     * クエリ結果にページネーションを適用
+     * ページネーション付きの申請一覧を取得
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return LengthAwarePaginator
+     * @param string|null $status
+     * @return array{requests: array, paginator: LengthAwarePaginator}
      */
-    private function paginateResults(
-        \Illuminate\Database\Eloquent\Builder $query
-    ): LengthAwarePaginator
-    {
-        return $query->paginate(ApprovalRequestConstants::PER_PAGE);
+    private function getRequestListWithPagination(
+        \Illuminate\Database\Eloquent\Builder $query,
+        ?string $status
+    ): array {
+        $query = $this->applyStatusFilter($query, $status);
+        $paginator = $query->paginate(ApprovalRequestConstants::PER_PAGE);
+
+        $formattedRequests = [];
+        foreach ($paginator as $request) {
+            $formattedRequests[] = $this->formatRequestData($request);
+        }
+
+        return [
+            'requests' => $formattedRequests,
+            'paginator' => $paginator
+        ];
     }
+
+    /************************************
+     * データフォーマット関連
+     ************************************/
+
+    /**
+     * 申請データを表示用にフォーマット
+     *
+     * @param ApprovalRequest $request
+     * @return array
+     */
+    private function formatRequestData(ApprovalRequest $request): array
+    {
+        return [
+            'id' => $request->id,
+            'created_at' => $this->formatDateTime($request->created_at),
+            'user' => $this->formatUserData($request->user),
+            'attendance_date' => TimeFormatter::formatDate($request->attendance->date),
+            'request_type' => $this->formatRequestType($request->request_type),
+            'current_time' => $this->formatTimeData($request, 'before'),
+            'requested_time' => $this->formatTimeData($request, 'after'),
+            'status' => $this->formatStatus($request->status),
+        ];
+    }
+
+    /**
+     * 日時をフォーマット
+     *
+     * @param Carbon $dateTime
+     * @return string
+     */
+    private function formatDateTime(Carbon $dateTime): string
+    {
+        return TimeFormatter::formatDate($dateTime, 'Y/m/d H:i');
+    }
+
+    /**
+     * ユーザー情報をフォーマット
+     *
+     * @param User $user
+     * @return array
+     */
+    private function formatUserData(User $user): array
+    {
+        return [
+            'name' => $user->full_name,
+        ];
+    }
+
+    /**
+     * 申請種別をフォーマット
+     *
+     * @param string $requestType
+     * @return string
+     */
+    private function formatRequestType(string $requestType): string
+    {
+        return ApprovalRequestConstants::REQUEST_TYPES[$requestType] ?? $requestType;
+    }
+
+    /**
+     * 時間データをフォーマット
+     *
+     * @param ApprovalRequest $request
+     * @param string $prefix 'before' or 'after'
+     * @return array
+     */
+    private function formatTimeData(ApprovalRequest $request, string $prefix): array
+    {
+        if ($request->request_type === 'time_correction') {
+            return $this->formatTimeCorrectionData($request, $prefix);
+        }
+
+        return $this->formatBreakTimeData($request, $prefix);
+    }
+
+    /**
+     * 時刻修正データをフォーマット
+     *
+     * @param ApprovalRequest $request
+     * @param string $prefix
+     * @return array
+     */
+    private function formatTimeCorrectionData(ApprovalRequest $request, string $prefix): array
+    {
+        $clockIn = $request->{$prefix.'_clock_in'};
+        $clockOut = $request->{$prefix.'_clock_out'};
+
+        return [
+            'type' => 'time',
+            'data' => [
+                'clock_in' => $clockIn
+                    ? TimeFormatter::formatTime(Carbon::parse($clockIn))
+                    : '-',
+                'clock_out' => $clockOut
+                    ? TimeFormatter::formatTime(Carbon::parse($clockOut))
+                    : '-',
+            ]
+        ];
+    }
+
+    /**
+     * 休憩時間データをフォーマット
+     *
+     * @param ApprovalRequest $request
+     * @param string $prefix
+     * @return array
+     */
+    private function formatBreakTimeData(ApprovalRequest $request, string $prefix): array
+    {
+        $breakTime = $request->{$prefix.'_break_time'};
+
+        return [
+            'type' => 'break',
+            'data' => [
+                'break_time' => $breakTime
+                    ? TimeFormatter::minutesToTime($breakTime)
+                    : '-'
+            ]
+        ];
+    }
+
+    /**
+     * ステータスをフォーマット
+     *
+     * @param string $status
+     * @return array
+     */
+    private function formatStatus(string $status): array
+    {
+        return [
+            'label' => ApprovalRequestConstants::REQUEST_STATUSES[$status] ?? $status,
+            'class' => ApprovalRequestConstants::STATUS_CLASSES[$status] ?? 'bg-gray-100 text-gray-800'
+        ];
+    }
+
+    /************************************
+     * 申請の作成・更新関連
+     ************************************/
 
     /**
      * 新規申請を作成
@@ -140,14 +253,9 @@ class ApprovalRequestService
     public function createRequest(array $data): ApprovalRequest
     {
         try {
-            // トランザクション開始
             return DB::transaction(function () use ($data) {
-                // 申請を作成
                 $request = ApprovalRequest::create($data);
-
-                // 関連する勤怠データのステータスを更新
                 $request->attendance->update(['status' => 'pending_approval']);
-
                 return $request;
             });
         } catch (\Exception $e) {
@@ -166,20 +274,14 @@ class ApprovalRequestService
     public function approveRequest(ApprovalRequest $request): bool
     {
         try {
-            // トランザクションで処理を実行
             DB::transaction(function () use ($request) {
-                // 申請を承認状態に更新
                 $request->update(['status' => 'approved']);
-
-                // 勤怠データの更新
                 $updateData = $this->prepareAttendanceUpdateData($request);
                 $request->attendance->update($updateData);
             });
 
             return true;
-
         } catch (\Exception $e) {
-            // エラーログを記録
             Log::error('申請承認エラー', [
                 'request_id' => $request->id,
                 'error' => $e->getMessage()
@@ -198,23 +300,13 @@ class ApprovalRequestService
     public function rejectRequest(ApprovalRequest $request): bool
     {
         try {
-            // トランザクションで処理を実行
             DB::transaction(function () use ($request) {
-                // 申請を否認状態に更新
-                $request->update([
-                    'status' => 'rejected'
-                ]);
-
-                // 勤怠データのステータスを元に戻す
-                $request->attendance->update([
-                    'status' => 'left'
-                ]);
+                $request->update(['status' => 'rejected']);
+                $request->attendance->update(['status' => 'left']);
             });
 
             return true;
-
         } catch (\Exception $e) {
-            // エラーログを記録
             Log::error('申請否認エラー', [
                 'request_id' => $request->id,
                 'error' => $e->getMessage()
@@ -235,129 +327,9 @@ class ApprovalRequestService
                $attendance->status !== 'pending_approval';
     }
 
-    /**
-     * 申請フォーム表示用のデータを取得
-     *
-     * @param Attendance $attendance
-     * @return array
-     */
-    public function getRequestFormData(Attendance $attendance): array
-    {
-        return [
-            'id' => $attendance->id,
-            'date' => TimeFormatter::formatDate($attendance->date, 'Y年m月d日'),
-            'clock_in' => $attendance->clock_in
-                ? TimeFormatter::formatTime($attendance->clock_in)
-                : '未打刻',
-            'clock_out' => $attendance->clock_out
-                ? TimeFormatter::formatTime($attendance->clock_out)
-                : '未打刻',
-            'break_time' => $attendance->break_time
-                ? TimeFormatter::minutesToTime($attendance->break_time)
-                : '未設定',
-            'actual_work_time' => $attendance->actual_work_time
-                ? TimeFormatter::minutesToTime($attendance->actual_work_time)
-                : '未計算',
-            'raw_attendance' => $attendance,
-        ];
-    }
-
-
-    /**
-     * 申請データを表示用にフォーマット
-     *
-     * @param ApprovalRequest $request
-     * @return array
-     */
-    private function formatRequestData(ApprovalRequest $request): array
-    {
-        // 申請種別に応じて時間データの表示形式を変更
-        $currentTime = [];
-        $requestedTime = [];
-
-        if ($request->request_type === 'time_correction') {
-            // 時刻修正の場合は出退勤時刻を表示
-            $currentTime = [
-                'type' => 'time',
-                'data' => [
-                    'clock_in' => $request->before_clock_in
-                        ? TimeFormatter::formatTime(Carbon::parse($request->before_clock_in))
-                        : '-',
-                    'clock_out' => $request->before_clock_out
-                        ? TimeFormatter::formatTime(Carbon::parse($request->before_clock_out))
-                        : '-',
-                ]
-            ];
-            $requestedTime = [
-                'type' => 'time',
-                'data' => [
-                    'clock_in' => $request->after_clock_in
-                        ? TimeFormatter::formatTime(Carbon::parse($request->after_clock_in))
-                        : '-',
-                    'clock_out' => $request->after_clock_out
-                        ? TimeFormatter::formatTime(Carbon::parse($request->after_clock_out))
-                        : '-',
-                ]
-            ];
-        } else {
-            // 休憩時間修正の場合は休憩時間を表示
-            $currentTime = [
-                'type' => 'break',
-                'data' => [
-                    'break_time' => $request->before_break_time
-                        ? TimeFormatter::minutesToTime($request->before_break_time)
-                        : '-'
-                ]
-            ];
-            $requestedTime = [
-                'type' => 'break',
-                'data' => [
-                    'break_time' => $request->after_break_time
-                        ? TimeFormatter::minutesToTime($request->after_break_time)
-                        : '-'
-                ]
-            ];
-        }
-
-        return [
-            'id' => $request->id,
-            'created_at' => TimeFormatter::formatDate($request->created_at, 'Y/m/d H:i'),
-            'user' => [
-                'name' => $request->user->full_name,
-            ],
-            'attendance_date' => TimeFormatter::formatDate($request->attendance->date),
-            'request_type' => ApprovalRequestConstants::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
-            'current_time' => $currentTime,
-            'requested_time' => $requestedTime,
-            'status' => [
-                'label' => ApprovalRequestConstants::REQUEST_STATUSES[$request->status] ?? $request->status,
-                'class' => ApprovalRequestConstants::STATUS_CLASSES[$request->status] ?? 'bg-gray-100 text-gray-800'
-            ],
-        ];
-    }
-
-    /**
-     * 申請の時間データをフォーマット
-     *
-     * @param ApprovalRequest $request
-     * @param string $type 'before' or 'after'
-     * @return array
-     */
-    private function formatTimeData(ApprovalRequest $request, string $type): array
-    {
-        $prefix = "{$type}_";
-        return [
-            'clock_in' => $request->{$prefix.'clock_in'}
-                ? TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'clock_in'}))
-                : null,
-            'clock_out' => $request->{$prefix.'clock_out'}
-                ? TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'clock_out'}))
-                : null,
-            'break_time' => $request->{$prefix.'break_time'}
-                ? TimeFormatter::minutesToTime($request->{$prefix.'break_time'})
-                : null
-        ];
-    }
+    /************************************
+     * 勤怠時間の計算関連
+     ************************************/
 
     /**
      * 勤怠データの更新情報を準備
@@ -415,69 +387,83 @@ class ApprovalRequestService
      */
     private function calculateWorkTimes(array $updateData, Attendance $attendance): array
     {
-        // 出勤・退勤時刻を取得
         $date = $attendance->date->format('Y-m-d');
-
-        // 出勤時刻の処理
-        $clockIn = isset($updateData['clock_in'])
-            ? $updateData['clock_in']
-            : ($attendance->clock_in
-                ? Carbon::parse($date . ' ' . $attendance->clock_in->format('H:i:s'))
-                : null);
-
-        // 退勤時刻の処理
-        $clockOut = isset($updateData['clock_out'])
-            ? $updateData['clock_out']
-            : ($attendance->clock_out
-                ? Carbon::parse($date . ' ' . $attendance->clock_out->format('H:i:s'))
-                : null);
-
-        // 休憩時間（分単位）
+        $clockIn = $this->getClockInTime($updateData, $attendance, $date);
+        $clockOut = $this->getClockOutTime($updateData, $attendance, $date);
         $breakTime = $updateData['break_time'] ?? $attendance->break_time ?? WorkTimeConstants::DEFAULT_BREAK_MINUTES;
 
         if ($clockIn && $clockOut) {
             try {
-                // 総勤務時間を計算
-                $workMinutes = $clockIn->diffInMinutes($clockOut);
-
-                // 実労働時間 = 総勤務時間 - 休憩時間
-                $actualWorkMinutes = $workMinutes - $breakTime;
-
-                // デバッグログ
-                Log::debug('勤務時間計算詳細', [
-                    'clock_in' => $clockIn->format('H:i'),
-                    'clock_out' => $clockOut->format('H:i'),
-                    'total_minutes' => $workMinutes,
-                    'break_time' => $breakTime,
-                    'actual_minutes' => $actualWorkMinutes,
-                    'formatted_hours' => floor($actualWorkMinutes / 60),
-                    'formatted_minutes' => $actualWorkMinutes % 60,
-                    'formatted_work_time' => sprintf(
-                        '%d:%02d',
-                        floor($actualWorkMinutes / 60),
-                        $actualWorkMinutes % 60
-                    )
-                ]);
-
-                // 残業時間 = 実労働時間 - 所定労働時間
-                $overtimeMinutes = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
-
-                $updateData['actual_work_time'] = $actualWorkMinutes;
-                $updateData['overtime'] = $overtimeMinutes;
-                $updateData['night_work_time'] = $this->calculateNightWorkMinutes($clockIn, $clockOut);
-
+                return $this->calculateWorkTimeDetails($clockIn, $clockOut, $breakTime, $updateData);
             } catch (\Exception $e) {
-                Log::error('勤務時間計算エラー', [
-                    'error' => $e->getMessage(),
-                    'clock_in' => $clockIn->format('H:i'),
-                    'clock_out' => $clockOut->format('H:i'),
-                    'break_time' => $breakTime
-                ]);
+                $this->logWorkTimeCalculationError($e, $clockIn, $clockOut, $breakTime);
                 throw $e;
             }
         }
 
         return $updateData;
+    }
+
+    /**
+     * 出勤時刻を取得
+     *
+     * @param array $updateData
+     * @param Attendance $attendance
+     * @param string $date
+     * @return Carbon|null
+     */
+    private function getClockInTime(array $updateData, Attendance $attendance, string $date): ?Carbon
+    {
+        return isset($updateData['clock_in'])
+            ? $updateData['clock_in']
+            : ($attendance->clock_in
+                ? Carbon::parse($date . ' ' . $attendance->clock_in->format('H:i:s'))
+                : null);
+    }
+
+    /**
+     * 退勤時刻を取得
+     *
+     * @param array $updateData
+     * @param Attendance $attendance
+     * @param string $date
+     * @return Carbon|null
+     */
+    private function getClockOutTime(array $updateData, Attendance $attendance, string $date): ?Carbon
+    {
+        return isset($updateData['clock_out'])
+            ? $updateData['clock_out']
+            : ($attendance->clock_out
+                ? Carbon::parse($date . ' ' . $attendance->clock_out->format('H:i:s'))
+                : null);
+    }
+
+    /**
+     * 勤務時間の詳細を計算
+     *
+     * @param Carbon $clockIn
+     * @param Carbon $clockOut
+     * @param int $breakTime
+     * @param array $updateData
+     * @return array
+     */
+    private function calculateWorkTimeDetails(
+        Carbon $clockIn,
+        Carbon $clockOut,
+        int $breakTime,
+        array $updateData
+    ): array {
+        $workMinutes = $clockIn->diffInMinutes($clockOut);
+        $actualWorkMinutes = $workMinutes - $breakTime;
+        $overtimeMinutes = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
+
+        $this->logWorkTimeCalculation($clockIn, $clockOut, $workMinutes, $breakTime, $actualWorkMinutes);
+
+        return array_merge($updateData, [
+            'actual_work_time' => $actualWorkMinutes,
+            'overtime' => $overtimeMinutes,
+            'night_work_time' => $this->calculateNightWorkMinutes($clockIn, $clockOut),
+        ]);
     }
 
     /**
@@ -493,7 +479,6 @@ class ApprovalRequestService
         $currentTime = $clockIn->copy();
         $endTime = $clockOut->copy();
 
-        // 日付をまたぐ場合の処理
         if ($clockOut->lt($clockIn)) {
             $endTime->addDay();
         }
@@ -511,31 +496,84 @@ class ApprovalRequestService
     }
 
     /**
-     * 申請種別の選択肢を取得
+     * 勤務時間計算のログを記録
      *
-     * @return array<string, string>
+     * @param Carbon $clockIn
+     * @param Carbon $clockOut
+     * @param int $workMinutes
+     * @param int $breakTime
+     * @param int $actualWorkMinutes
+     * @return void
      */
-    private function getRequestTypeOptions(): array
-    {
-        return [
-            'time_correction' => '時刻修正',
-            'break_time_modification' => '休憩時間修正'
-        ];
+    private function logWorkTimeCalculation(
+        Carbon $clockIn,
+        Carbon $clockOut,
+        int $workMinutes,
+        int $breakTime,
+        int $actualWorkMinutes
+    ): void {
+        Log::debug('勤務時間計算詳細', [
+            'clock_in' => $clockIn->format('H:i'),
+            'clock_out' => $clockOut->format('H:i'),
+            'total_minutes' => $workMinutes,
+            'break_time' => $breakTime,
+            'actual_minutes' => $actualWorkMinutes,
+            'formatted_hours' => floor($actualWorkMinutes / 60),
+            'formatted_minutes' => $actualWorkMinutes % 60,
+            'formatted_work_time' => sprintf(
+                '%d:%02d',
+                floor($actualWorkMinutes / 60),
+                $actualWorkMinutes % 60
+            )
+        ]);
     }
 
     /**
-     * フォームのデフォルト値を取得
+     * 勤務時間計算エラーのログを記録
+     *
+     * @param \Exception $e
+     * @param Carbon $clockIn
+     * @param Carbon $clockOut
+     * @param int $breakTime
+     * @return void
+     */
+    private function logWorkTimeCalculationError(
+        \Exception $e,
+        Carbon $clockIn,
+        Carbon $clockOut,
+        int $breakTime
+    ): void {
+        Log::error('勤務時間計算エラー', [
+            'error' => $e->getMessage(),
+            'clock_in' => $clockIn->format('H:i'),
+            'clock_out' => $clockOut->format('H:i'),
+            'break_time' => $breakTime
+        ]);
+    }
+
+    /************************************
+     * フォームデータの管理関連
+     ************************************/
+
+    /**
+     * フォーム表示用のデータを整形して取得
      *
      * @param Attendance $attendance
-     * @return array
+     * @return array フォーム表示用のデータ
      */
-    private function getFormDefaultValues(Attendance $attendance): array
+    public function getFormData(Attendance $attendance): array
     {
         return [
-            'attendance_id' => $attendance->id,
-            'clock_in' => $attendance->clock_in?->format('H:i'),
-            'clock_out' => $attendance->clock_out?->format('H:i'),
-            'break_time' => TimeFormatter::minutesToTime($attendance->break_time)
+            'currentAttendance' => $this->getCurrentAttendanceData($attendance),
+            'formData' => $this->getFormDefaultValues($attendance),
+            'requestTypes' => $this->getRequestTypeOptions(),
+            'formattedAttendance' => [
+                'id' => $attendance->id,
+                'clock_in' => TimeFormatter::formatTime($attendance->clock_in),
+                'clock_out' => TimeFormatter::formatTime($attendance->clock_out),
+                'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
+                'raw_attendance' => $attendance,
+            ],
         ];
     }
 
@@ -561,24 +599,31 @@ class ApprovalRequestService
     }
 
     /**
-     * フォーム表示用のデータを整形して取得
+     * フォームのデフォルト値を取得
      *
      * @param Attendance $attendance
-     * @return array フォーム表示用のデータ
+     * @return array
      */
-    public function getFormData(Attendance $attendance): array
+    private function getFormDefaultValues(Attendance $attendance): array
     {
         return [
-            'currentAttendance' => $this->getCurrentAttendanceData($attendance),
-            'formData' => $this->getFormDefaultValues($attendance),
-            'requestTypes' => $this->getRequestTypeOptions(),
-            'formattedAttendance' => [
-                'id' => $attendance->id,
-                'clock_in' => TimeFormatter::formatTime($attendance->clock_in),
-                'clock_out' => TimeFormatter::formatTime($attendance->clock_out),
-                'break_time' => TimeFormatter::minutesToTime($attendance->break_time),
-                'raw_attendance' => $attendance,
-            ],
+            'attendance_id' => $attendance->id,
+            'clock_in' => $attendance->clock_in?->format('H:i'),
+            'clock_out' => $attendance->clock_out?->format('H:i'),
+            'break_time' => TimeFormatter::minutesToTime($attendance->break_time)
+        ];
+    }
+
+    /**
+     * 申請種別の選択肢を取得
+     *
+     * @return array<string, string>
+     */
+    private function getRequestTypeOptions(): array
+    {
+        return [
+            'time_correction' => '時刻修正',
+            'break_time_modification' => '休憩時間修正'
         ];
     }
 }
