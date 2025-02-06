@@ -17,57 +17,72 @@ use Illuminate\Support\Facades\Log;
  */
 class ApprovalRequestService
 {
-/**
- * 指定したユーザーの申請一覧を取得（フィルタリングとページネーション対応）
- *
- * @param int $userId ユーザーID
- * @param string|null $status フィルター用ステータス
- * @return array 整形済みの申請一覧とページネーション情報
- */
-public function getUserRequests(int $userId, ?string $status = null): array
-{
-    // クエリの構築
-    $query = ApprovalRequest::with(['attendance', 'approver'])
-        ->where('user_id', $userId);
+    /**
+     * 指定したユーザーの申請一覧を取得（フィルタリングとページネーション対応）
+     *
+     * @param int $userId ユーザーID
+     * @param string|null $status フィルター用ステータス
+     * @return array 整形済みの申請一覧とページネーション情報
+     */
+    public function getUserRequests(int $userId, ?string $status = null): array
+    {
+        // クエリの構築
+        $query = ApprovalRequest::with(['attendance', 'approver'])
+            ->where('user_id', $userId);
 
-    // ステータスフィルターの適用
-    if ($status && $status !== 'all') {
-        $query->where('status', $status);
+        // ステータスフィルターの適用
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        // ページネーションの取得
+        $paginator = $query->latest()
+            ->paginate(ApprovalRequestConstants::PER_PAGE);
+
+        // 申請データを整形
+        $formattedRequests = [];
+        foreach ($paginator as $request) {
+            $formattedRequests[] = $this->formatRequestData($request);
+        }
+
+        // 整形したデータとページネーション情報を返す
+        return [
+            'requests' => $formattedRequests,
+            'paginator' => $paginator
+        ];
     }
-
-    // ページネーションの取得
-    $paginator = $query->latest()
-        ->paginate(ApprovalRequestConstants::PER_PAGE);
-
-    // 申請データを整形
-    $formattedRequests = [];
-    foreach ($paginator as $request) {
-        $formattedRequests[] = $this->formatRequestData($request);
-    }
-
-    // 整形したデータとページネーション情報を返す
-    return [
-        'requests' => $formattedRequests,
-        'paginator' => $paginator
-    ];
-}
 
     /**
      * ステータスでフィルタリングした申請一覧を取得
      *
      * @param string|null $status フィルタリングするステータス
-     * @return LengthAwarePaginator
+     * @return array{requests: array, paginator: LengthAwarePaginator} フォーマット済みの申請一覧とページネーション情報
      */
-    public function getFilteredRequests(?string $status = null): LengthAwarePaginator
+    public function getFilteredRequests(?string $status = null): array
     {
-        // ベースとなるクエリを作成
-        $query = $this->createBaseQuery();
+        // クエリの構築
+        $query = ApprovalRequest::with(['user', 'attendance', 'approver']);
 
-        // フィルタリングを適用
-        $filteredQuery = $this->applyStatusFilter($query, $status);
+        // ステータスフィルターの適用
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
 
-        // ページネーションを適用して結果を返す
-        return $this->paginateResults($filteredQuery);
+        // ページネーションの取得
+        $paginator = $query->latest()
+            ->paginate(ApprovalRequestConstants::PER_PAGE);
+
+        // 申請データを整形
+        $formattedRequests = [];
+        foreach ($paginator as $request) {
+            $formattedRequests[] = $this->formatRequestData($request);
+        }
+
+        // 整形したデータとページネーション情報を返す
+        return [
+            'requests' => $formattedRequests,
+            'paginator' => $paginator
+        ];
     }
 
     /**
@@ -247,6 +262,7 @@ public function getUserRequests(int $userId, ?string $status = null): array
         ];
     }
 
+
     /**
      * 申請データを表示用にフォーマット
      *
@@ -255,21 +271,68 @@ public function getUserRequests(int $userId, ?string $status = null): array
      */
     private function formatRequestData(ApprovalRequest $request): array
     {
+        // 申請種別に応じて時間データの表示形式を変更
+        $currentTime = [];
+        $requestedTime = [];
+
+        if ($request->request_type === 'time_correction') {
+            // 時刻修正の場合は出退勤時刻を表示
+            $currentTime = [
+                'type' => 'time',
+                'data' => [
+                    'clock_in' => $request->before_clock_in
+                        ? TimeFormatter::formatTime(Carbon::parse($request->before_clock_in))
+                        : '-',
+                    'clock_out' => $request->before_clock_out
+                        ? TimeFormatter::formatTime(Carbon::parse($request->before_clock_out))
+                        : '-',
+                ]
+            ];
+            $requestedTime = [
+                'type' => 'time',
+                'data' => [
+                    'clock_in' => $request->after_clock_in
+                        ? TimeFormatter::formatTime(Carbon::parse($request->after_clock_in))
+                        : '-',
+                    'clock_out' => $request->after_clock_out
+                        ? TimeFormatter::formatTime(Carbon::parse($request->after_clock_out))
+                        : '-',
+                ]
+            ];
+        } else {
+            // 休憩時間修正の場合は休憩時間を表示
+            $currentTime = [
+                'type' => 'break',
+                'data' => [
+                    'break_time' => $request->before_break_time
+                        ? TimeFormatter::minutesToTime($request->before_break_time)
+                        : '-'
+                ]
+            ];
+            $requestedTime = [
+                'type' => 'break',
+                'data' => [
+                    'break_time' => $request->after_break_time
+                        ? TimeFormatter::minutesToTime($request->after_break_time)
+                        : '-'
+                ]
+            ];
+        }
+
         return [
             'id' => $request->id,
             'created_at' => TimeFormatter::formatDate($request->created_at, 'Y/m/d H:i'),
+            'user' => [
+                'name' => $request->user->full_name,
+            ],
             'attendance_date' => TimeFormatter::formatDate($request->attendance->date),
             'request_type' => ApprovalRequestConstants::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
+            'current_time' => $currentTime,
+            'requested_time' => $requestedTime,
             'status' => [
                 'label' => ApprovalRequestConstants::REQUEST_STATUSES[$request->status] ?? $request->status,
                 'class' => ApprovalRequestConstants::STATUS_CLASSES[$request->status] ?? 'bg-gray-100 text-gray-800'
             ],
-            'approver_name' => $request->approver->full_name,
-            'comment' => $request->comment,
-            'time_data' => [
-                'before' => $this->formatTimeData($request, 'before'),
-                'after' => $this->formatTimeData($request, 'after')
-            ]
         ];
     }
 

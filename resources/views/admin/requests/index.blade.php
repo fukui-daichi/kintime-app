@@ -39,7 +39,16 @@
                                         申請者
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        対象日
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         申請種別
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        現在の打刻
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        申請した打刻
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         状態
@@ -53,32 +62,46 @@
                                 @forelse ($requests as $request)
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $request->created_at->format('Y/m/d H:i') }}
+                                            {{ $request['created_at'] ?? '-' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $request->user->full_name }}
+                                            {{ $request['user']['name'] ?? '-' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $request->request_type }}
+                                            {{ $request['attendance_date'] ?? '-' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ $request['request_type'] ?? '-' }}
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900">
+                                            @if($request['current_time']['type'] === 'time')
+                                                <div>出勤：{{ $request['current_time']['data']['clock_in'] }}</div>
+                                                <div>退勤：{{ $request['current_time']['data']['clock_out'] }}</div>
+                                            @else
+                                                <div>休憩時間：{{ $request['current_time']['data']['break_time'] }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900">
+                                            @if($request['requested_time']['type'] === 'time')
+                                                <div>出勤：{{ $request['requested_time']['data']['clock_in'] }}</div>
+                                                <div>退勤：{{ $request['requested_time']['data']['clock_out'] }}</div>
+                                            @else
+                                                <div>休憩時間：{{ $request['requested_time']['data']['break_time'] }}</div>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                                {{ $request->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                                {{ $request->status === 'approved' ? 'bg-green-100 text-green-800' : '' }}
-                                                {{ $request->status === 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                                                {{ $request->status }}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $request['status']['class'] ?? '' }}">
+                                                {{ $request['status']['label'] ?? '-' }}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            @if($request->status === 'pending')
+                                            @if(($request['status']['label'] ?? '') === '承認待ち')
                                                 <div class="flex space-x-2">
-                                                    <form action="{{ route('requests.approve', ['approvalRequest' => $request->id]) }}"
+                                                    <form action="{{ route('requests.approve', ['approvalRequest' => $request['id']]) }}"
                                                           method="POST"
                                                           class="inline">
                                                         @csrf
                                                         @method('PATCH')
-                                                        <!-- デバッグ用にフォームのactionを表示 -->
-                                                        <!-- {{ route('requests.approve', ['approvalRequest' => $request->id]) }} -->
                                                         <button type="submit"
                                                             onclick="return confirm('この申請を承認してよろしいですか？')"
                                                             class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
@@ -86,7 +109,7 @@
                                                         </button>
                                                     </form>
 
-                                                    <form action="{{ route('requests.reject', ['approvalRequest' => $request->id]) }}"
+                                                    <form action="{{ route('requests.reject', ['approvalRequest' => $request['id']]) }}"
                                                           method="POST"
                                                           class="inline">
                                                         @csrf
@@ -103,7 +126,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                        <td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                             申請がありません
                                         </td>
                                     </tr>
@@ -114,7 +137,7 @@
 
                     {{-- ページネーション --}}
                     <div class="mt-4">
-                        {{ $requests->appends(['status' => $currentStatus])->links() }}
+                        {{ $paginator->appends(['status' => $currentStatus])->links() }}
                     </div>
                 </div>
             </div>

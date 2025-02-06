@@ -44,20 +44,20 @@
                                         申請種別
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        現在の打刻
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        申請した打刻
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         状態
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        承認者
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        コメント
                                     </th>
                                 </tr>
                             </thead>
                             {{-- テーブルボディ --}}
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @forelse ($requests as $request)
-                                    <tr class="hover:bg-gray-50">
+                                    <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $request['created_at'] }}
                                         </td>
@@ -67,16 +67,26 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {{ $request['request_type'] }}
                                         </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900">
+                                            @if($request['current_time']['type'] === 'time')
+                                                <div>出勤：{{ $request['current_time']['data']['clock_in'] }}</div>
+                                                <div>退勤：{{ $request['current_time']['data']['clock_out'] }}</div>
+                                            @else
+                                                <div>休憩時間：{{ $request['current_time']['data']['break_time'] }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900">
+                                            @if($request['requested_time']['type'] === 'time')
+                                                <div>出勤：{{ $request['requested_time']['data']['clock_in'] }}</div>
+                                                <div>退勤：{{ $request['requested_time']['data']['clock_out'] }}</div>
+                                            @else
+                                                <div>休憩時間：{{ $request['requested_time']['data']['break_time'] }}</div>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $request['status']['class'] }}">
                                                 {{ $request['status']['label'] }}
                                             </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $request['approver_name'] }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            {{ $request['comment'] ?? '-' }}
                                         </td>
                                     </tr>
                                 @empty
