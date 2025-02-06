@@ -9,6 +9,7 @@ use App\Http\Requests\ApprovalRequest\StoreApprovalRequest;
 use App\Http\Requests\ApprovalRequest\UpdateApprovalRequest;
 use App\Http\Requests\ApprovalRequest\RejectApprovalRequest;
 use App\Services\ApprovalRequest\ApprovalRequestService;
+use App\Constants\ApprovalRequestConstants;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -37,30 +38,32 @@ class ApprovalRequestController extends Controller
 
     /**
      * ユーザー種別に応じた申請一覧を表示
+     * 管理者：すべての申請を表示（ステータスでフィルタリング可能）
+     * 一般ユーザー：自分の申請のみ表示
      *
      * @param Request $request
      * @return View
      */
     public function index(Request $request): View
     {
+        // 管理者の場合
         if (Auth::user()->user_type === 'admin') {
-            // 管理者用の処理
-            $currentStatus = $request->query('status', 'pending');
+            // クエリパラメータからステータスを取得（デフォルトは 'pending'）
+            $currentStatus = $request->query('status', ApprovalRequestConstants::DEFAULT_STATUS);
+
+            // フィルタリングされた申請一覧を取得
             $requests = $this->approvalRequestService->getFilteredRequests($currentStatus);
 
-            $statusList = [
-                'all' => 'すべて',
-                'pending' => '承認待ち',
-                'approved' => '承認済み',
-                'rejected' => '否認'
-            ];
-
-            return view('admin.requests.index', compact('requests', 'statusList', 'currentStatus'));
-        } else {
-            // 一般ユーザー用の処理
-            $requests = $this->approvalRequestService->getUserRequests(Auth::id());
-            return view('user.requests.index', compact('requests'));
+            return view('admin.requests.index', [
+                'requests' => $requests,
+                'statusList' => ApprovalRequestConstants::STATUS_LIST,
+                'currentStatus' => $currentStatus,
+            ]);
         }
+
+        // 一般ユーザーの場合
+        $requests = $this->approvalRequestService->getUserRequests(Auth::id());
+        return view('user.requests.index', ['requests' => $requests]);
     }
 
     /**

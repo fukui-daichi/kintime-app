@@ -6,6 +6,7 @@ use App\Models\ApprovalRequest;
 use App\Models\Attendance;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
+use App\Constants\ApprovalRequestConstants;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -17,32 +18,6 @@ use Illuminate\Support\Facades\Log;
  */
 class ApprovalRequestService
 {
-    /**
-     * @var array<string, string> 申請種別の日本語表示
-     */
-    private const REQUEST_TYPES = [
-        'time_correction' => '時刻修正',
-        'break_time_modification' => '休憩時間修正',
-    ];
-
-    /**
-     * @var array<string, string> 申請状態の日本語表示
-     */
-    private const REQUEST_STATUSES = [
-        'pending' => '承認待ち',
-        'approved' => '承認済み',
-        'rejected' => '否認',
-    ];
-
-    /**
-     * @var array<string, string> 申請状態に対応するCSSクラス
-     */
-    private const STATUS_CLASSES = [
-        'pending' => 'bg-yellow-100 text-yellow-800',
-        'approved' => 'bg-green-100 text-green-800',
-        'rejected' => 'bg-red-100 text-red-800',
-    ];
-
     /**
      * 指定したユーザーの申請一覧を取得
      *
@@ -62,26 +37,63 @@ class ApprovalRequestService
      * ステータスでフィルタリングした申請一覧を取得
      *
      * @param string|null $status フィルタリングするステータス
-     * @param int $perPage 1ページの表示件数
      * @return LengthAwarePaginator
      */
-    public function getFilteredRequests(?string $status = 'pending', int $perPage = 20): LengthAwarePaginator
+    public function getFilteredRequests(?string $status = null): LengthAwarePaginator
     {
-        return ApprovalRequest::with(['user', 'attendance', 'approver'])
-            ->when($status && $status !== 'all', fn($query) => $query->where('status', $status))
-            ->latest()
-            ->paginate($perPage);
+        // ベースとなるクエリを作成
+        $query = $this->createBaseQuery();
+
+        // フィルタリングを適用
+        $filteredQuery = $this->applyStatusFilter($query, $status);
+
+        // ページネーションを適用して結果を返す
+        return $this->paginateResults($filteredQuery);
     }
 
     /**
-     * 承認待ちの申請一覧を取得（管理者用）
+     * 申請一覧の基本クエリを作成
      *
-     * @return Collection
+     * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function getPendingRequests(): Collection
+    private function createBaseQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        $requests = $this->getFilteredRequests('pending')->items();
-        return collect($requests)->map(fn($request) => $this->formatRequestData($request));
+        return ApprovalRequest::with(['user', 'attendance', 'approver'])
+            ->latest();
+    }
+
+    /**
+     * ステータスによるフィルタリングを適用
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string|null $status
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyStatusFilter(
+        \Illuminate\Database\Eloquent\Builder $query,
+        ?string $status
+    ): \Illuminate\Database\Eloquent\Builder
+    {
+        $status = $status ?? ApprovalRequestConstants::DEFAULT_STATUS;
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        return $query;
+    }
+
+    /**
+     * クエリ結果にページネーションを適用
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return LengthAwarePaginator
+     */
+    private function paginateResults(
+        \Illuminate\Database\Eloquent\Builder $query
+    ): LengthAwarePaginator
+    {
+        return $query->paginate(ApprovalRequestConstants::PER_PAGE);
     }
 
     /**
@@ -228,10 +240,10 @@ class ApprovalRequestService
             'id' => $request->id,
             'created_at' => TimeFormatter::formatDate($request->created_at, 'Y/m/d H:i'),
             'attendance_date' => TimeFormatter::formatDate($request->attendance->date),
-            'request_type' => self::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
+            'request_type' => ApprovalRequestConstants::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
             'status' => [
-                'label' => self::REQUEST_STATUSES[$request->status] ?? $request->status,
-                'class' => self::STATUS_CLASSES[$request->status] ?? 'bg-gray-100 text-gray-800'
+                'label' => ApprovalRequestConstants::REQUEST_STATUSES[$request->status] ?? $request->status,
+                'class' => ApprovalRequestConstants::STATUS_CLASSES[$request->status] ?? 'bg-gray-100 text-gray-800'
             ],
             'approver_name' => $request->approver->full_name,
             'comment' => $request->comment,
