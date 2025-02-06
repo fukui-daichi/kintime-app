@@ -46,24 +46,25 @@ class ApprovalRequestController extends Controller
      */
     public function index(Request $request): View
     {
-        // 管理者の場合
-        if (Auth::user()->user_type === 'admin') {
-            // クエリパラメータからステータスを取得（デフォルトは 'pending'）
-            $currentStatus = $request->query('status', ApprovalRequestConstants::DEFAULT_STATUS);
+        $user = Auth::user();
+        $currentStatus = $request->query('status', ApprovalRequestConstants::DEFAULT_STATUS);
 
-            // フィルタリングされた申請一覧を取得
+        if ($user->user_type === 'admin') {
             $requests = $this->approvalRequestService->getFilteredRequests($currentStatus);
-
-            return view('admin.requests.index', [
-                'requests' => $requests,
-                'statusList' => ApprovalRequestConstants::STATUS_LIST,
-                'currentStatus' => $currentStatus,
-            ]);
+            $view = 'admin.requests.index';
+        } else {
+            $result = $this->approvalRequestService->getUserRequests($user->id, $currentStatus);
+            $requests = $result['requests'];
+            $paginator = $result['paginator'];
+            $view = 'user.requests.index';
         }
 
-        // 一般ユーザーの場合
-        $requests = $this->approvalRequestService->getUserRequests(Auth::id());
-        return view('user.requests.index', ['requests' => $requests]);
+        return view($view, [
+            'requests' => $requests,
+            'paginator' => $paginator ?? null,
+            'statusList' => ApprovalRequestConstants::STATUS_LIST,
+            'currentStatus' => $currentStatus,
+        ]);
     }
 
     /**

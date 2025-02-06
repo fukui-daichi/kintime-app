@@ -9,7 +9,6 @@ use App\Constants\WorkTimeConstants;
 use App\Constants\ApprovalRequestConstants;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -18,20 +17,40 @@ use Illuminate\Support\Facades\Log;
  */
 class ApprovalRequestService
 {
-    /**
-     * 指定したユーザーの申請一覧を取得
-     *
-     * @param int $userId ユーザーID
-     * @return Collection フォーマット済みの申請一覧
-     */
-    public function getUserRequests(int $userId): Collection
-    {
-        return ApprovalRequest::with(['attendance', 'approver'])
-            ->where('user_id', $userId)
-            ->latest()
-            ->get()
-            ->map(fn($request) => $this->formatRequestData($request));
+/**
+ * 指定したユーザーの申請一覧を取得（フィルタリングとページネーション対応）
+ *
+ * @param int $userId ユーザーID
+ * @param string|null $status フィルター用ステータス
+ * @return array 整形済みの申請一覧とページネーション情報
+ */
+public function getUserRequests(int $userId, ?string $status = null): array
+{
+    // クエリの構築
+    $query = ApprovalRequest::with(['attendance', 'approver'])
+        ->where('user_id', $userId);
+
+    // ステータスフィルターの適用
+    if ($status && $status !== 'all') {
+        $query->where('status', $status);
     }
+
+    // ページネーションの取得
+    $paginator = $query->latest()
+        ->paginate(ApprovalRequestConstants::PER_PAGE);
+
+    // 申請データを整形
+    $formattedRequests = [];
+    foreach ($paginator as $request) {
+        $formattedRequests[] = $this->formatRequestData($request);
+    }
+
+    // 整形したデータとページネーション情報を返す
+    return [
+        'requests' => $formattedRequests,
+        'paginator' => $paginator
+    ];
+}
 
     /**
      * ステータスでフィルタリングした申請一覧を取得
