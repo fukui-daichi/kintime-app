@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\ApprovalRequest;
+use App\Models\ModificationRequest;
 use Illuminate\Database\Seeder;
 
-class ApprovalRequestSeeder extends Seeder
+class ModificationRequestSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -22,7 +22,7 @@ class ApprovalRequestSeeder extends Seeder
         // 各ユーザーに対して10件ずつ申請を作成（合計30件）
         foreach ($users as $user) {
             // 承認待ち4件
-            ApprovalRequest::factory()
+            ModificationRequest::factory()
                 ->count(4)
                 ->pending()
                 ->create([
@@ -31,7 +31,7 @@ class ApprovalRequestSeeder extends Seeder
                 ]);
 
             // 承認済み4件
-            ApprovalRequest::factory()
+            ModificationRequest::factory()
                 ->count(4)
                 ->approved()
                 ->create([
@@ -40,7 +40,7 @@ class ApprovalRequestSeeder extends Seeder
                 ]);
 
             // 否認2件
-            ApprovalRequest::factory()
+            ModificationRequest::factory()
                 ->count(2)
                 ->rejected()
                 ->create([

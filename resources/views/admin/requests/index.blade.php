@@ -97,7 +97,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             @if(($request['status']['label'] ?? '') === '承認待ち')
                                                 <div class="flex space-x-2">
-                                                    <form action="{{ route('requests.approve', ['approvalRequest' => $request['id']]) }}"
+                                                    <form action="{{ route('requests.approve', ['modificationRequest' => $request['id']]) }}"
                                                           method="POST"
                                                           class="inline">
                                                         @csrf
@@ -109,7 +109,7 @@
                                                         </button>
                                                     </form>
 
-                                                    <form action="{{ route('requests.reject', ['approvalRequest' => $request['id']]) }}"
+                                                    <form action="{{ route('requests.reject', ['modificationRequest' => $request['id']]) }}"
                                                           method="POST"
                                                           class="inline">
                                                         @csrf

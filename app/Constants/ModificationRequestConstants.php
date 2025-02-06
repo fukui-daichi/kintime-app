@@ -5,7 +5,7 @@ namespace App\Constants;
 /**
  * 申請関連の定数を管理するクラス
  */
-class ApprovalRequestConstants
+class ModificationRequestConstants
 {
     /**
      * @var array<string, string> 申請種別の日本語表示

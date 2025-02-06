@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Carbon\Carbon;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ApprovalRequest>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ModificationRequest>
  */
-class ApprovalRequestFactory extends Factory
+class ModificationRequestFactory extends Factory
 {
     /**
      * Define the model's default state.

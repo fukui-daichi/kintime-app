@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ApprovalRequest\CreateApprovalRequest;
-use App\Models\ApprovalRequest;
+use App\Http\Requests\ModificationRequest\CreateModificationRequest;
+use App\Models\ModificationRequest;
 use App\Models\Timecard;
-use App\Http\Requests\ApprovalRequest\StoreApprovalRequest;
-use App\Http\Requests\ApprovalRequest\UpdateApprovalRequest;
-use App\Http\Requests\ApprovalRequest\RejectApprovalRequest;
-use App\Services\ApprovalRequest\ApprovalRequestService;
-use App\Constants\ApprovalRequestConstants;
+use App\Services\ModificationRequest\ModificationRequestService;
+use App\Constants\ModificationRequestConstants;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -19,21 +16,21 @@ use Illuminate\Support\Facades\Log;
 /**
  * 申請関連の処理を担当するコントローラー
  */
-class ApprovalRequestController extends Controller
+class ModificationRequestController extends Controller
 {
     /**
-     * @var ApprovalRequestService
+     * @var ModificationRequestService
      */
-    private $approvalRequestService;
+    private $modificationRequestService;
 
     /**
      * コンストラクタ
      *
-     * @param ApprovalRequestService $approvalRequestService
+     * @param ModificationRequestService $modificationRequestService
      */
-    public function __construct(ApprovalRequestService $approvalRequestService)
+    public function __construct(ModificationRequestService $modificationRequestService)
     {
-        $this->approvalRequestService = $approvalRequestService;
+        $this->modificationRequestService = $modificationRequestService;
     }
 
     /**
@@ -47,20 +44,20 @@ class ApprovalRequestController extends Controller
     public function index(Request $request): View
     {
         $user = Auth::user();
-        $currentStatus = $request->query('status', ApprovalRequestConstants::DEFAULT_STATUS);
+        $currentStatus = $request->query('status', ModificationRequestConstants::DEFAULT_STATUS);
 
         if ($user->user_type === 'admin') {
             // 管理者の場合
-            $result = $this->approvalRequestService->getAllRequestList($currentStatus);
+            $result = $this->modificationRequestService->getAllRequestList($currentStatus);
         } else {
             // 一般ユーザーの場合
-            $result = $this->approvalRequestService->getPersonalRequestList($user->id, $currentStatus);
+            $result = $this->modificationRequestService->getPersonalRequestList($user->id, $currentStatus);
         }
 
         return view($user->user_type === 'admin' ? 'admin.requests.index' : 'user.requests.index', [
             'requests' => $result['requests'],
             'paginator' => $result['paginator'],
-            'statusList' => ApprovalRequestConstants::STATUS_LIST,
+            'statusList' => ModificationRequestConstants::STATUS_LIST,
             'currentStatus' => $currentStatus,
         ]);
     }
@@ -74,12 +71,12 @@ class ApprovalRequestController extends Controller
     public function create(Timecard $timecard)
     {
         // 申請可能か確認
-        if (!$this->approvalRequestService->canRequestModification($timecard)) {
+        if (!$this->modificationRequestService->canRequestModification($timecard)) {
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
         // フォームデータを取得
-        $viewData = $this->approvalRequestService->getFormData($timecard);
+        $viewData = $this->modificationRequestService->getFormData($timecard);
 
         return view('user.requests.create', $viewData);
     }
@@ -87,14 +84,14 @@ class ApprovalRequestController extends Controller
     /**
      * 申請を保存
      *
-     * @param CreateApprovalRequest $request
+     * @param CreateModificationRequest $request
      * @return RedirectResponse
      */
-    public function store(CreateApprovalRequest $request): RedirectResponse
+    public function store(CreateModificationRequest $request): RedirectResponse
     {
         try {
             // 申請データを作成
-            $this->approvalRequestService->createRequest($request->validatedData());
+            $this->modificationRequestService->createRequest($request->validatedData());
 
             return redirect()->route('requests.index')
                 ->with('success', '申請を送信しました');
@@ -110,13 +107,13 @@ class ApprovalRequestController extends Controller
     /**
      * 申請を承認
      *
-     * @param ApprovalRequest $approvalRequest
+     * @param ModificationRequest $modificationRequest
      * @return RedirectResponse
      */
-    public function approve(ApprovalRequest $approvalRequest): RedirectResponse
+    public function approve(ModificationRequest $modificationRequest): RedirectResponse
     {
         try {
-            $this->approvalRequestService->approveRequest($approvalRequest);
+            $this->modificationRequestService->approveRequest($modificationRequest);
             return back()->with('success', '申請を承認しました');
         } catch (\Exception $e) {
             Log::error('承認処理でエラーが発生: ' . $e->getMessage());
@@ -127,13 +124,13 @@ class ApprovalRequestController extends Controller
     /**
      * 申請を否認
      *
-     * @param ApprovalRequest $approvalRequest
+     * @param ModificationRequest $modificationRequest
      * @return RedirectResponse
      */
-    public function reject(ApprovalRequest $approvalRequest): RedirectResponse
+    public function reject(ModificationRequest $modificationRequest): RedirectResponse
     {
         try {
-            $this->approvalRequestService->rejectRequest($approvalRequest);
+            $this->modificationRequestService->rejectRequest($modificationRequest);
             return back()->with('success', '申請を否認しました');
         } catch (\Exception $e) {
             return back()->with('error', '申請の否認に失敗しました');

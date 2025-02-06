@@ -68,9 +68,9 @@ class Timecard extends Model
      * 申請履歴とのリレーション
      * この勤怠に対する申請履歴を取得
      */
-    public function approvalRequests(): HasMany
+    public function modificationRequests(): HasMany
     {
-        return $this->hasMany(ApprovalRequest::class);
+        return $this->hasMany(ModificationRequest::class);
     }
 
     /**
@@ -80,7 +80,7 @@ class Timecard extends Model
      */
     public function hasPendingRequest(): bool
     {
-        return $this->approvalRequests()
+        return $this->modificationRequests()
             ->where('status', 'pending')
             ->exists();
     }
@@ -88,11 +88,11 @@ class Timecard extends Model
     /**
      * 最新の申請を取得
      *
-     * @return \App\Models\ApprovalRequest|null
+     * @return \App\Models\ModificationRequest|null
      */
     public function getLatestRequest()
     {
-        return $this->approvalRequests()
+        return $this->modificationRequests()
             ->latest()
             ->first();
     }
@@ -122,7 +122,7 @@ class Timecard extends Model
      *
      * @return bool
      */
-    public function isPendingApproval(): bool
+    public function isPendingModification(): bool
     {
         return $this->status === self::STATUS_PENDING_APPROVAL;
     }

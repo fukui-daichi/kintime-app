@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\ApprovalRequest;
+namespace App\Services\ModificationRequest;
 
-use App\Models\ApprovalRequest;
+use App\Models\ModificationRequest;
 use App\Models\Timecard;
 use App\Models\User;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
-use App\Constants\ApprovalRequestConstants;
+use App\Constants\ModificationRequestConstants;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * 申請に関するビジネスロジックを管理するサービスクラス
  */
-class ApprovalRequestService
+class ModificationRequestService
 {
     /************************************
      * 申請一覧の取得関連
@@ -57,7 +57,7 @@ class ApprovalRequestService
      */
     private function buildBaseRequestQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return ApprovalRequest::with(['user', 'timecard', 'approver'])
+        return ModificationRequest::with(['user', 'timecard', 'approver'])
             ->latest();
     }
 
@@ -91,7 +91,7 @@ class ApprovalRequestService
         ?string $status
     ): array {
         $query = $this->applyStatusFilter($query, $status);
-        $paginator = $query->paginate(ApprovalRequestConstants::PER_PAGE);
+        $paginator = $query->paginate(ModificationRequestConstants::PER_PAGE);
 
         $formattedRequests = [];
         foreach ($paginator as $request) {
@@ -111,10 +111,10 @@ class ApprovalRequestService
     /**
      * 申請データを表示用にフォーマット
      *
-     * @param ApprovalRequest $request
+     * @param ModificationRequest $request
      * @return array
      */
-    private function formatRequestData(ApprovalRequest $request): array
+    private function formatRequestData(ModificationRequest $request): array
     {
         return [
             'id' => $request->id,
@@ -160,17 +160,17 @@ class ApprovalRequestService
      */
     private function formatRequestType(string $requestType): string
     {
-        return ApprovalRequestConstants::REQUEST_TYPES[$requestType] ?? $requestType;
+        return ModificationRequestConstants::REQUEST_TYPES[$requestType] ?? $requestType;
     }
 
     /**
      * 時間データをフォーマット
      *
-     * @param ApprovalRequest $request
+     * @param ModificationRequest $request
      * @param string $prefix 'before' or 'after'
      * @return array
      */
-    private function formatTimeData(ApprovalRequest $request, string $prefix): array
+    private function formatTimeData(ModificationRequest $request, string $prefix): array
     {
         if ($request->request_type === 'time_correction') {
             return $this->formatTimeCorrectionData($request, $prefix);
@@ -182,11 +182,11 @@ class ApprovalRequestService
     /**
      * 時刻修正データをフォーマット
      *
-     * @param ApprovalRequest $request
+     * @param ModificationRequest $request
      * @param string $prefix
      * @return array
      */
-    private function formatTimeCorrectionData(ApprovalRequest $request, string $prefix): array
+    private function formatTimeCorrectionData(ModificationRequest $request, string $prefix): array
     {
         $clockIn = $request->{$prefix.'_clock_in'};
         $clockOut = $request->{$prefix.'_clock_out'};
@@ -207,11 +207,11 @@ class ApprovalRequestService
     /**
      * 休憩時間データをフォーマット
      *
-     * @param ApprovalRequest $request
+     * @param ModificationRequest $request
      * @param string $prefix
      * @return array
      */
-    private function formatBreakTimeData(ApprovalRequest $request, string $prefix): array
+    private function formatBreakTimeData(ModificationRequest $request, string $prefix): array
     {
         $breakTime = $request->{$prefix.'_break_time'};
 
@@ -234,8 +234,8 @@ class ApprovalRequestService
     private function formatStatus(string $status): array
     {
         return [
-            'label' => ApprovalRequestConstants::REQUEST_STATUSES[$status] ?? $status,
-            'class' => ApprovalRequestConstants::STATUS_CLASSES[$status] ?? 'bg-gray-100 text-gray-800'
+            'label' => ModificationRequestConstants::REQUEST_STATUSES[$status] ?? $status,
+            'class' => ModificationRequestConstants::STATUS_CLASSES[$status] ?? 'bg-gray-100 text-gray-800'
         ];
     }
 
@@ -247,14 +247,14 @@ class ApprovalRequestService
      * 新規申請を作成
      *
      * @param array $data 申請データ
-     * @return ApprovalRequest
+     * @return ModificationRequest
      * @throws \Exception
      */
-    public function createRequest(array $data): ApprovalRequest
+    public function createRequest(array $data): ModificationRequest
     {
         try {
             return DB::transaction(function () use ($data) {
-                $request = ApprovalRequest::create($data);
+                $request = ModificationRequest::create($data);
                 $request->timecard->update(['status' => 'pending_approval']);
                 return $request;
             });
@@ -267,11 +267,11 @@ class ApprovalRequestService
     /**
      * 申請を承認する
      *
-     * @param ApprovalRequest $request 承認対象の申請
+     * @param ModificationRequest $request 承認対象の申請
      * @return bool 承認処理の成功・失敗
      * @throws \Exception トランザクション処理で例外が発生した場合
      */
-    public function approveRequest(ApprovalRequest $request): bool
+    public function approveRequest(ModificationRequest $request): bool
     {
         try {
             DB::transaction(function () use ($request) {
@@ -293,11 +293,11 @@ class ApprovalRequestService
     /**
      * 申請を否認する
      *
-     * @param ApprovalRequest $request 否認対象の申請
+     * @param ModificationRequest $request 否認対象の申請
      * @return bool 否認処理の成功・失敗
      * @throws \Exception トランザクション処理で例外が発生した場合
      */
-    public function rejectRequest(ApprovalRequest $request): bool
+    public function rejectRequest(ModificationRequest $request): bool
     {
         try {
             DB::transaction(function () use ($request) {
@@ -334,10 +334,10 @@ class ApprovalRequestService
     /**
      * 勤怠データの更新情報を準備
      *
-     * @param ApprovalRequest $request
+     * @param ModificationRequest $request
      * @return array
      */
-    private function prepareTimecardUpdateData(ApprovalRequest $request): array
+    private function prepareTimecardUpdateData(ModificationRequest $request): array
     {
         $timecard = $request->timecard;
         $updateData = ['status' => 'left'];
@@ -357,10 +357,10 @@ class ApprovalRequestService
     /**
      * 時刻修正データの準備
      *
-     * @param ApprovalRequest $request
+     * @param ModificationRequest $request
      * @return array
      */
-    private function prepareTimeCorrection(ApprovalRequest $request): array
+    private function prepareTimeCorrection(ModificationRequest $request): array
     {
         $updateData = [];
         $date = $request->timecard->date->format('Y-m-d');

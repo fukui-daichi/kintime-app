@@ -51,7 +51,7 @@ class User extends Authenticatable
      */
     public function requestsAsApplicant(): HasMany
     {
-        return $this->hasMany(ApprovalRequest::class, 'user_id');
+        return $this->hasMany(ModificationRequest::class, 'user_id');
     }
 
     /**
@@ -60,7 +60,7 @@ class User extends Authenticatable
      */
     public function requestsAsApprover(): HasMany
     {
-        return $this->hasMany(ApprovalRequest::class, 'approver_id');
+        return $this->hasMany(ModificationRequest::class, 'approver_id');
     }
 
     /**

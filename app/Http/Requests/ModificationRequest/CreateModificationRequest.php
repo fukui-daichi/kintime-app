@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\ApprovalRequest;
+namespace App\Http\Requests\ModificationRequest;
 
 use App\Helpers\TimeFormatter;
 use Illuminate\Foundation\Http\FormRequest;
@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
-class CreateApprovalRequest extends FormRequest
+class CreateModificationRequest extends FormRequest
 {
     public function rules(): array
     {

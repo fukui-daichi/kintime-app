@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\TimecardController;
-use App\Http\Controllers\ApprovalRequestController;
+use App\Http\Controllers\ModificationRequestController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -28,17 +28,13 @@ Route::middleware('auth')->group(function () {
 
     // 申請関連のルート
     Route::prefix('requests')->name('requests.')->middleware('auth')->group(function () {
-        // 共通ルート - ユーザー種別で表示を分岐
-        Route::get('/', [ApprovalRequestController::class, 'index'])->name('index');
+        Route::get('/', [ModificationRequestController::class, 'index'])->name('index');
+        Route::get('/create/{timecard}', [ModificationRequestController::class, 'create'])->name('create');
+        Route::post('/', [ModificationRequestController::class, 'store'])->name('store');
 
-        // 一般ユーザー用のルート
-        Route::get('/create/{timecard}', [ApprovalRequestController::class, 'create'])->name('create');
-        Route::post('/', [ApprovalRequestController::class, 'store'])->name('store');
-
-        // 管理者用のルート
         Route::middleware('admin')->group(function () {
-            Route::patch('/{approvalRequest}/approve', [ApprovalRequestController::class, 'approve'])->name('approve');
-            Route::patch('/{approvalRequest}/reject', [ApprovalRequestController::class, 'reject'])->name('reject');
+            Route::patch('/{modificationRequest}/approve', [ModificationRequestController::class, 'approve'])->name('approve');
+            Route::patch('/{modificationRequest}/reject', [ModificationRequestController::class, 'reject'])->name('reject');
         });
     });
 });
