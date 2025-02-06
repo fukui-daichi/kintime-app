@@ -40,16 +40,116 @@ class MonthlyAttendanceService
             'previousMonth' => $targetDate->copy()->subMonth(),
             'nextMonth' => $targetDate->copy()->addMonth(),
             'showNextMonth' => $targetDate->copy()->addMonth()->lte($currentDate),
-            'years' => $this->getYearOptions(),
-            'months' => $this->getMonthOptions($targetDate->year),
+            'years' => $this->generateYearOptions(),
+            'months' => $this->generateMonthOptions($targetDate->year),
+        ];
+    }
+
+    /**
+     * 対象月の勤怠データを取得して整形
+     *
+     * @param int $userId ユーザーID
+     * @param Carbon $targetDate 対象年月
+     * @return Collection
+     */
+    private function getMonthlyAttendance(int $userId, Carbon $targetDate): Collection
+    {
+        // 月の範囲を設定
+        $dateRange = $this->getMonthDateRange($targetDate);
+
+        // DBから勤怠データを取得
+        $attendances = $this->fetchAttendanceData($userId, $dateRange);
+
+        // カレンダーデータを生成
+        return $this->generateCalendarData($dateRange['start'], $dateRange['end'], $attendances);
+    }
+
+    /**
+     * 月の開始日と終了日を取得
+     *
+     * @param Carbon $targetDate
+     * @return array{start: Carbon, end: Carbon}
+     */
+    private function getMonthDateRange(Carbon $targetDate): array
+    {
+        return [
+            'start' => $targetDate->copy()->startOfMonth(),
+            'end' => $targetDate->copy()->endOfMonth()
+        ];
+    }
+
+    /**
+     * DBから勤怠データを取得
+     *
+     * @param int $userId
+     * @param array{start: Carbon, end: Carbon} $dateRange
+     * @return Collection
+     */
+    private function fetchAttendanceData(int $userId, array $dateRange): Collection
+    {
+        return Attendance::where('user_id', $userId)
+            ->whereBetween('date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString()
+            ])
+            ->orderBy('date')
+            ->get()
+            ->keyBy(fn($attendance) => $attendance->date->format('Y-m-d'));
+    }
+
+    /**
+     * カレンダーデータを生成
+     *
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @param Collection $attendances
+     * @return Collection
+     */
+    private function generateCalendarData(
+        Carbon $startDate,
+        Carbon $endDate,
+        Collection $attendances
+    ): Collection {
+        $result = collect();
+        $currentDate = $startDate->copy();
+
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $attendance = $attendances->get($dateKey);
+
+            $result->push($this->formatDayData($currentDate, $attendance));
+            $currentDate->addDay();
+        }
+
+        return $result;
+    }
+
+    /**
+     * 日付データを整形
+     *
+     * @param Carbon $date
+     * @param Attendance|null $attendance
+     * @return array
+     */
+    private function formatDayData(Carbon $date, ?Attendance $attendance): array
+    {
+        return [
+            'date' => $date->copy(),
+            'attendance' => $attendance,
+            'is_weekend' => $date->isWeekend(),
+            'clock_in' => $attendance ? TimeFormatter::formatTime($attendance->clock_in) : null,
+            'clock_out' => $attendance ? TimeFormatter::formatTime($attendance->clock_out) : null,
+            'work_time' => $attendance ? TimeFormatter::minutesToTime($attendance->actual_work_time) : null,
+            'overtime' => $attendance ? TimeFormatter::minutesToTime($attendance->overtime) : null,
+            'night_work_time' => $attendance ? TimeFormatter::minutesToTime($attendance->night_work_time) : null,
         ];
     }
 
     /**
      * 対象年月のCarbonインスタンスを作成
      *
-     * @param string|null $year 年
-     * @param string|null $month 月
+     * @param string|null $year
+     * @param string|null $month
      * @return Carbon
      */
     private function createTargetDate(?string $year, ?string $month): Carbon
@@ -62,55 +162,11 @@ class MonthlyAttendanceService
     }
 
     /**
-     * 月の勤怠データを取得して整形
-     *
-     * @param int $userId ユーザーID
-     * @param Carbon $targetDate 対象年月
-     * @return Collection
-     */
-    private function getMonthlyAttendance(int $userId, Carbon $targetDate): Collection
-    {
-        $startDate = $targetDate->copy()->startOfMonth();
-        $endDate = $targetDate->copy()->endOfMonth();
-
-        // 指定月の勤怠データを取得
-        $attendances = Attendance::where('user_id', $userId)
-            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->orderBy('date')
-            ->get()
-            ->keyBy(fn($attendance) => $attendance->date->format('Y-m-d'));
-
-        // 月の全日付に対してデータを生成
-        $result = collect();
-        $currentDate = $startDate->copy();
-
-        while ($currentDate <= $endDate) {
-            $dateKey = $currentDate->format('Y-m-d');
-            $attendance = $attendances->get($dateKey);
-
-            $result->push([
-                'date' => $currentDate->copy(),
-                'attendance' => $attendance,
-                'is_weekend' => $currentDate->isWeekend(),
-                'clock_in' => $attendance ? TimeFormatter::formatTime($attendance->clock_in) : null,
-                'clock_out' => $attendance ? TimeFormatter::formatTime($attendance->clock_out) : null,
-                'work_time' => $attendance ? TimeFormatter::minutesToTime($attendance->actual_work_time) : null,
-                'overtime' => $attendance ? TimeFormatter::minutesToTime($attendance->overtime) : null,
-                'night_work_time' => $attendance ? TimeFormatter::minutesToTime($attendance->night_work_time) : null,
-            ]);
-
-            $currentDate->addDay();
-        }
-
-        return $result;
-    }
-
-    /**
      * プルダウン用の年の選択肢を生成
      *
-     * @return array{value: int, label: string, disabled: bool}[]
+     * @return array
      */
-    private function getYearOptions(): array
+    private function generateYearOptions(): array
     {
         $currentYear = now()->year;
         return collect(range($currentYear - 2, $currentYear))
@@ -125,10 +181,10 @@ class MonthlyAttendanceService
     /**
      * プルダウン用の月の選択肢を生成
      *
-     * @param int $targetYear 対象年
-     * @return array{value: int, label: string, disabled: bool}[]
+     * @param int $targetYear
+     * @return array
      */
-    private function getMonthOptions(int $targetYear): array
+    private function generateMonthOptions(int $targetYear): array
     {
         $currentYear = now()->year;
         $currentMonth = now()->month;
