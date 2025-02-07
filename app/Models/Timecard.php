@@ -68,9 +68,9 @@ class Timecard extends Model
      * 申請履歴とのリレーション
      * この勤怠に対する申請履歴を取得
      */
-    public function modificationRequests(): HasMany
+    public function requests(): HasMany
     {
-        return $this->hasMany(ModificationRequest::class);
+        return $this->hasMany(Request::class, 'target_date', 'date');
     }
 
     /**

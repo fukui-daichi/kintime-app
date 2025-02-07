@@ -49,18 +49,18 @@ class User extends Authenticatable
      * 申請者としての申請リレーション
      * ユーザーが申請者として作成した申請一覧を取得
      */
-    public function requestsAsApplicant(): HasMany
+    public function requests(): HasMany
     {
-        return $this->hasMany(ModificationRequest::class, 'user_id');
+        return $this->hasMany(Request::class);
     }
 
     /**
      * 承認者としての申請リレーション
      * ユーザーが承認者として受け取った申請一覧を取得
      */
-    public function requestsAsApprover(): HasMany
+    public function approvedRequests(): HasMany
     {
-        return $this->hasMany(ModificationRequest::class, 'approver_id');
+        return $this->hasMany(Request::class, 'approver_id');
     }
 
     /**
