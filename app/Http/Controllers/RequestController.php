@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ModificationRequest\CreateModificationRequest;
-use App\Models\ModificationRequest;
+use App\Http\Requests\Request\CreateRequest;
+use App\Models\Request;
 use App\Models\Timecard;
-use App\Services\ModificationRequest\ModificationRequestService;
-use App\Constants\ModificationRequestConstants;
-use Illuminate\Http\Request;
+use App\Services\Request\RequestService;
+use App\Constants\RequestConstants;
+use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -16,21 +16,21 @@ use Illuminate\Support\Facades\Log;
 /**
  * 申請関連の処理を担当するコントローラー
  */
-class ModificationRequestController extends Controller
+class RequestController extends Controller
 {
     /**
-     * @var ModificationRequestService
+     * @var RequestService
      */
-    private $modificationRequestService;
+    private $requestService;
 
     /**
      * コンストラクタ
      *
-     * @param ModificationRequestService $modificationRequestService
+     * @param RequestService $requestService
      */
-    public function __construct(ModificationRequestService $modificationRequestService)
+    public function __construct(RequestService $requestService)
     {
-        $this->modificationRequestService = $modificationRequestService;
+        $this->requestService = $requestService;
     }
 
     /**
@@ -38,26 +38,26 @@ class ModificationRequestController extends Controller
      * 管理者：すべての申請を表示（ステータスでフィルタリング可能）
      * 一般ユーザー：自分の申請のみ表示
      *
-     * @param Request $request
+     * @param HttpRequest $request
      * @return View
      */
-    public function index(Request $request): View
+    public function index(HttpRequest $request): View
     {
         $user = Auth::user();
-        $currentStatus = $request->query('status', ModificationRequestConstants::DEFAULT_STATUS);
+        $currentStatus = $request->query('status', RequestConstants::DEFAULT_STATUS);
 
         if ($user->user_type === 'admin') {
             // 管理者の場合
-            $result = $this->modificationRequestService->getAllRequestList($currentStatus);
+            $result = $this->requestService->getAllRequestList($currentStatus);
         } else {
             // 一般ユーザーの場合
-            $result = $this->modificationRequestService->getPersonalRequestList($user->id, $currentStatus);
+            $result = $this->requestService->getPersonalRequestList($user->id, $currentStatus);
         }
 
         return view($user->user_type === 'admin' ? 'admin.requests.index' : 'user.requests.index', [
             'requests' => $result['requests'],
             'paginator' => $result['paginator'],
-            'statusList' => ModificationRequestConstants::STATUS_LIST,
+            'statusList' => RequestConstants::STATUS_LIST,
             'currentStatus' => $currentStatus,
         ]);
     }
@@ -71,12 +71,12 @@ class ModificationRequestController extends Controller
     public function create(Timecard $timecard)
     {
         // 申請可能か確認
-        if (!$this->modificationRequestService->canRequestModification($timecard)) {
+        if (!$this->requestService->canUpdateTimecard($timecard)) {
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
         // フォームデータを取得
-        $viewData = $this->modificationRequestService->getFormData($timecard);
+        $viewData = $this->requestService->getFormData($timecard);
 
         return view('user.requests.create', $viewData);
     }
@@ -84,14 +84,14 @@ class ModificationRequestController extends Controller
     /**
      * 申請を保存
      *
-     * @param CreateModificationRequest $request
+     * @param CreateRequest $request
      * @return RedirectResponse
      */
-    public function store(CreateModificationRequest $request): RedirectResponse
+    public function store(CreateRequest $request): RedirectResponse
     {
         try {
             // 申請データを作成
-            $this->modificationRequestService->createRequest($request->validatedData());
+            $this->requestService->createRequest($request->validatedData());
 
             return redirect()->route('requests.index')
                 ->with('success', '申請を送信しました');
@@ -107,16 +107,16 @@ class ModificationRequestController extends Controller
     /**
      * 申請を承認
      *
-     * @param ModificationRequest $modificationRequest
+     * @param Request $request
      * @return RedirectResponse
      */
-    public function approve(ModificationRequest $modificationRequest): RedirectResponse
+    public function approve(Request $request): RedirectResponse
     {
         try {
-            $this->modificationRequestService->approveRequest($modificationRequest);
+            $this->requestService->approveRequest($request);
             return back()->with('success', '申請を承認しました');
         } catch (\Exception $e) {
-            Log::error('承認処理でエラーが発生: ' . $e->getMessage());
+            Log::error('承認処理エラー: ' . $e->getMessage());
             return back()->with('error', '申請の承認に失敗しました');
         }
     }
@@ -124,15 +124,16 @@ class ModificationRequestController extends Controller
     /**
      * 申請を否認
      *
-     * @param ModificationRequest $modificationRequest
+     * @param Request $request
      * @return RedirectResponse
      */
-    public function reject(ModificationRequest $modificationRequest): RedirectResponse
+    public function reject(Request $request): RedirectResponse
     {
         try {
-            $this->modificationRequestService->rejectRequest($modificationRequest);
+            $this->requestService->rejectRequest($request);
             return back()->with('success', '申請を否認しました');
         } catch (\Exception $e) {
+            Log::error('否認処理エラー: ' . $e->getMessage());
             return back()->with('error', '申請の否認に失敗しました');
         }
     }
@@ -146,6 +147,11 @@ class ModificationRequestController extends Controller
      */
     private function handleRequestError(\Exception $e, string $message): RedirectResponse
     {
+        Log::error('申請処理エラー', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
         return back()
             ->with('error', $message)
             ->withInput();
