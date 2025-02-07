@@ -12,6 +12,14 @@ class Timecard extends Model
     use HasFactory;
 
     /**
+     * 勤怠状態の定数定義
+     */
+    public const STATUS_WORKING = 'working';           // 勤務中
+    public const STATUS_LEFT = 'left';                 // 退勤済み
+    public const STATUS_PENDING_APPROVAL = 'pending_approval'; // 承認待ち
+    public const STATUS_APPROVED = 'approved';         // 承認済み
+
+    /**
      * The attributes that are mass assignable.
      * 一括代入可能な属性
      *
@@ -48,14 +56,6 @@ class Timecard extends Model
     ];
 
     /**
-     * 勤怠状態の定数定義
-     */
-    public const STATUS_WORKING = 'working';           // 勤務中
-    public const STATUS_LEFT = 'left';                 // 退勤済み
-    public const STATUS_PENDING_APPROVAL = 'pending_approval'; // 承認待ち
-    public const STATUS_APPROVED = 'approved';         // 承認済み
-
-    /**
      * Userモデルとのリレーション
      * 勤怠データに紐づくユーザー情報を取得
      */
@@ -80,19 +80,19 @@ class Timecard extends Model
      */
     public function hasPendingRequest(): bool
     {
-        return $this->modificationRequests()
-            ->where('status', 'pending')
+        return $this->requests()
+            ->where('status', Request::STATUS_PENDING)
             ->exists();
     }
 
     /**
      * 最新の申請を取得
      *
-     * @return \App\Models\ModificationRequest|null
+     * @return \App\Models\Request|null
      */
     public function getLatestRequest()
     {
-        return $this->modificationRequests()
+        return $this->requests()
             ->latest()
             ->first();
     }
@@ -122,7 +122,7 @@ class Timecard extends Model
      *
      * @return bool
      */
-    public function isPendingModification(): bool
+    public function isPendingRequest(): bool
     {
         return $this->status === self::STATUS_PENDING_APPROVAL;
     }
