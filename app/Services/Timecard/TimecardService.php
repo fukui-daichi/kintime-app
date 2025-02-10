@@ -5,33 +5,26 @@ namespace App\Services\Timecard;
 use App\Models\Timecard;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
+use App\Repositories\Interfaces\TimecardRepositoryInterface;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * 勤怠管理の基本機能を担当するサービスクラス
+ * 勤怠管理の機能を担当するサービスクラス
  */
 class TimecardService
 {
-    private $monthlyService;
+    private $timecardRepository;
 
-    public function __construct(MonthlyTimecardService $monthlyService)
+    public function __construct(TimecardRepositoryInterface $timecardRepository)
     {
-        $this->monthlyService = $monthlyService;
+        $this->timecardRepository = $timecardRepository;
     }
 
-    /**
-     * 月別勤怠一覧画面用のデータを取得
-     *
-     * @param int $userId ユーザーID
-     * @param string|null $year 年（nullの場合は現在年）
-     * @param string|null $month 月（nullの場合は現在月）
-     * @return array 月別勤怠データ
-     */
-    public function getMonthlyTimecardData(int $userId, ?string $year = null, ?string $month = null): array
-    {
-        return $this->monthlyService->getData($userId, $year, $month);
-    }
+    /************************************
+     * 基本情報取得関連
+     ************************************/
 
     /**
      * 勤怠情報に関するデータを取得
@@ -46,7 +39,7 @@ class TimecardService
      */
     public function getDailyTimecardData(int $userId): array
     {
-        $timecard = $this->getTodayTimecard($userId);
+        $timecard = $this->timecardRepository->getTodayTimecard($userId);
 
         return [
             'timecard' => $timecard,
@@ -56,6 +49,51 @@ class TimecardService
         ];
     }
 
+    /************************************
+     * 月次データ取得関連
+     ************************************/
+
+    /**
+     * 月別勤怠一覧画面用のデータを取得
+     *
+     * @param int $userId ユーザーID
+     * @param string|null $year 年（nullの場合は現在年）
+     * @param string|null $month 月（nullの場合は現在月）
+     * @return array{
+     *   timecards: Collection,
+     *   targetDate: Carbon,
+     *   previousMonth: Carbon,
+     *   nextMonth: Carbon,
+     *   showNextMonth: bool,
+     *   years: array,
+     *   months: array
+     * }
+     */
+    public function getMonthlyTimecardData(int $userId, ?string $year = null, ?string $month = null): array
+    {
+        $targetDate = $this->createTargetDate($year, $month);
+        $currentDate = now()->startOfMonth();
+        $dateRange = $this->getMonthDateRange($targetDate);
+
+        return [
+            'timecards' => $this->generateCalendarData(
+                $dateRange['start'],
+                $dateRange['end'],
+                $this->timecardRepository->getMonthlyTimecards($userId, $dateRange['start'], $dateRange['end'])
+            ),
+            'targetDate' => $targetDate,
+            'previousMonth' => $targetDate->copy()->subMonth(),
+            'nextMonth' => $targetDate->copy()->addMonth(),
+            'showNextMonth' => $targetDate->copy()->addMonth()->lte($currentDate),
+            'years' => $this->generateYearOptions(),
+            'months' => $this->generateMonthOptions($targetDate->year),
+        ];
+    }
+
+    /************************************
+     * 打刻処理関連
+     ************************************/
+
     /**
      * 出勤打刻処理
      *
@@ -64,12 +102,19 @@ class TimecardService
      */
     public function clockIn(int $userId): array
     {
-        if ($this->hasTodayTimecard($userId)) {
+        if ($this->timecardRepository->hasTodayTimecard($userId)) {
             return $this->createResponse(false, '本日はすでに出勤打刻されています。');
         }
 
         try {
-            $this->createTimecardRecord($userId);
+            $now = Carbon::now();
+            $this->timecardRepository->create([
+                'user_id' => $userId,
+                'date' => $now->toDateString(),
+                'clock_in' => $now->toTimeString(),
+                'break_time' => WorkTimeConstants::DEFAULT_BREAK_MINUTES,
+                'status' => 'working',
+            ]);
             return $this->createResponse(true, '出勤を記録しました。');
         } catch (\Exception $e) {
             Log::error('出勤打刻エラー', ['error' => $e->getMessage(), 'user_id' => $userId]);
@@ -85,14 +130,26 @@ class TimecardService
      */
     public function clockOut(int $userId): array
     {
-        $timecard = $this->getTodayWorkingTimecard($userId);
+        $timecard = $this->timecardRepository->getTodayWorkingTimecard($userId);
 
         if (!$timecard) {
             return $this->createResponse(false, '本日の出勤記録が見つかりません。');
         }
 
         try {
-            $this->updateTimecardForClockOut($timecard);
+            $clockIn = Carbon::parse($timecard->clock_in);
+            $clockOut = Carbon::now();
+
+            $workTimes = $this->calculateWorkTimes($clockIn, $clockOut, $timecard->break_time);
+
+            $this->timecardRepository->update($timecard, array_merge(
+                $workTimes,
+                [
+                    'clock_out' => TimeFormatter::formatTime($clockOut),
+                    'status' => 'left',
+                ]
+            ));
+
             return $this->createResponse(true, '退勤を記録しました。');
         } catch (\Exception $e) {
             Log::error('退勤打刻エラー', ['error' => $e->getMessage(), 'user_id' => $userId]);
@@ -100,46 +157,9 @@ class TimecardService
         }
     }
 
-    /**
-     * 出勤記録を作成
-     *
-     * @param int $userId
-     * @return Timecard
-     */
-    private function createTimecardRecord(int $userId): Timecard
-    {
-        $now = Carbon::now();
-
-        return Timecard::create([
-            'user_id' => $userId,
-            'date' => $now->toDateString(),
-            'clock_in' => $now->toTimeString(),
-            'break_time' => WorkTimeConstants::DEFAULT_BREAK_MINUTES,
-            'status' => 'working',
-        ]);
-    }
-
-    /**
-     * 退勤時の勤怠記録更新
-     *
-     * @param Timecard $timecard
-     * @return bool
-     */
-    private function updateTimecardForClockOut(Timecard $timecard): bool
-    {
-        $clockIn = Carbon::parse($timecard->clock_in);
-        $clockOut = Carbon::now();
-
-        $workTimes = $this->calculateWorkTimes($clockIn, $clockOut, $timecard->break_time);
-
-        return $timecard->update(array_merge(
-            $workTimes,
-            [
-                'clock_out' => TimeFormatter::formatTime($clockOut),
-                'status' => 'left',
-            ]
-        ));
-    }
+    /************************************
+     * 勤務時間計算関連
+     ************************************/
 
     /**
      * 勤務時間を計算
@@ -213,66 +233,121 @@ class TimecardService
                $hour < WorkTimeConstants::NIGHT_WORK_END_HOUR;
     }
 
+    /************************************
+     * カレンダーデータ生成関連
+     ************************************/
+
     /**
-     * 当日の勤怠記録を取得
+     * カレンダーデータを生成
      *
-     * @param int $userId
-     * @return Timecard|null
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @param Collection $timecards
+     * @return Collection
      */
-    private function getTodayTimecard(int $userId): ?Timecard
-    {
-        return Timecard::where('user_id', $userId)
-            ->where('date', Carbon::now()->toDateString())
-            ->first();
+    private function generateCalendarData(
+        Carbon $startDate,
+        Carbon $endDate,
+        Collection $timecards
+    ): Collection {
+        $result = collect();
+        $currentDate = $startDate->copy();
+
+        // タイムカードデータを日付でキー化
+        $timecardsByDate = $timecards->keyBy(function ($timecard) {
+            return $timecard->date->format('Y-m-d');
+        });
+
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $timecard = $timecardsByDate->get($dateKey);
+
+            $result->push([
+                'date' => $currentDate->copy(),
+                'timecard' => $timecard,
+                'is_weekend' => $currentDate->isWeekend(),
+                'clock_in' => $timecard ? TimeFormatter::formatTime($timecard->clock_in) : null,
+                'clock_out' => $timecard ? TimeFormatter::formatTime($timecard->clock_out) : null,
+                'work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->actual_work_time) : null,
+                'overtime' => $timecard ? TimeFormatter::minutesToTime($timecard->overtime) : null,
+                'night_work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->night_work_time) : null,
+            ]);
+
+            $currentDate->addDay();
+        }
+
+        return $result;
     }
 
     /**
-     * 当日の作業中の勤怠記録を取得
+     * 月の開始日と終了日を取得
      *
-     * @param int $userId
-     * @return Timecard|null
+     * @param Carbon $targetDate
+     * @return array{start: Carbon, end: Carbon}
      */
-    private function getTodayWorkingTimecard(int $userId): ?Timecard
+    private function getMonthDateRange(Carbon $targetDate): array
     {
-        return Timecard::where('user_id', $userId)
-            ->where('date', Carbon::now()->toDateString())
-            ->where('status', 'working')
-            ->first();
+        return [
+            'start' => $targetDate->copy()->startOfMonth(),
+            'end' => $targetDate->copy()->endOfMonth()
+        ];
+    }
+
+    /************************************
+     * ユーティリティ関連
+     ************************************/
+
+    /**
+     * 対象年月のCarbonインスタンスを作成
+     *
+     * @param string|null $year
+     * @param string|null $month
+     * @return Carbon
+     */
+    private function createTargetDate(?string $year, ?string $month): Carbon
+    {
+        return Carbon::create(
+            $year ?? now()->year,
+            $month ?? now()->month,
+            1
+        );
     }
 
     /**
-     * 出勤打刻が可能か判定
+     * プルダウン用の年の選択肢を生成
      *
-     * @param Timecard|null $timecard
-     * @return bool
+     * @return array
      */
-    private function canClockIn(?Timecard $timecard): bool
+    private function generateYearOptions(): array
     {
-        return !$timecard;
+        $currentYear = now()->year;
+        return collect(range($currentYear - 2, $currentYear))
+            ->map(fn($year) => [
+                'value' => $year,
+                'label' => sprintf('%d年', $year),
+                'disabled' => $year > $currentYear
+            ])
+            ->toArray();
     }
 
     /**
-     * 退勤打刻が可能か判定
+     * プルダウン用の月の選択肢を生成
      *
-     * @param Timecard|null $timecard
-     * @return bool
+     * @param int $targetYear
+     * @return array
      */
-    private function canClockOut(?Timecard $timecard): bool
+    private function generateMonthOptions(int $targetYear): array
     {
-        return $timecard && $timecard->status === 'working';
-    }
+        $currentYear = now()->year;
+        $currentMonth = now()->month;
 
-    /**
-     * 当日の勤怠記録が存在するか確認
-     *
-     * @param int $userId
-     * @return bool
-     */
-    private function hasTodayTimecard(int $userId): bool
-    {
-        return Timecard::where('user_id', $userId)
-            ->where('date', Carbon::now()->toDateString())
-            ->exists();
+        return collect(range(1, 12))
+            ->map(fn($month) => [
+                'value' => $month,
+                'label' => sprintf('%d月', $month),
+                'disabled' => $targetYear === $currentYear && $month > $currentMonth
+            ])
+            ->toArray();
     }
 
     /**
@@ -319,6 +394,28 @@ class TimecardService
             'success' => $success,
             'message' => $message
         ];
+    }
+
+    /**
+     * 出勤打刻が可能か判定
+     *
+     * @param Timecard|null $timecard
+     * @return bool
+     */
+    private function canClockIn(?Timecard $timecard): bool
+    {
+        return !$timecard;
+    }
+
+    /**
+     * 退勤打刻が可能か判定
+     *
+     * @param Timecard|null $timecard
+     * @return bool
+     */
+    private function canClockOut(?Timecard $timecard): bool
+    {
+        return $timecard && $timecard->status === 'working';
     }
 
     /**
