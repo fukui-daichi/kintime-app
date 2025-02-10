@@ -5,6 +5,11 @@ namespace App\Services\Timecard;
 use App\Models\Timecard;
 use App\Helpers\TimeFormatter;
 use App\Constants\WorkTimeConstants;
+use App\Exceptions\Timecard\DuplicateClockInException;
+use App\Exceptions\Timecard\ClockInNotFoundException;
+use App\Exceptions\Timecard\TimecardCreateException;
+use App\Exceptions\Timecard\TimecardUpdateException;
+use App\Exceptions\Timecard\InvalidWorkTimeException;
 use App\Repositories\Interfaces\TimecardRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -100,25 +105,31 @@ class TimecardService
      * @param int $userId ユーザーID
      * @return array{success: bool, message: string}
      */
-    public function clockIn(int $userId): array
+    public function clockIn(int $userId): void
     {
+        // 重複チェック
         if ($this->timecardRepository->hasTodayTimecard($userId)) {
-            return $this->createResponse(false, '本日はすでに出勤打刻されています。');
+            $context = ['user_id' => $userId, 'date' => Carbon::now()->toDateString()];
+            throw new DuplicateClockInException($context);
         }
 
         try {
             $now = Carbon::now();
-            $this->timecardRepository->create([
+            $timecardData = [
                 'user_id' => $userId,
                 'date' => $now->toDateString(),
                 'clock_in' => $now->toTimeString(),
                 'break_time' => WorkTimeConstants::DEFAULT_BREAK_MINUTES,
                 'status' => 'working',
-            ]);
-            return $this->createResponse(true, '出勤を記録しました。');
+            ];
+
+            $this->timecardRepository->create($timecardData);
         } catch (\Exception $e) {
-            Log::error('出勤打刻エラー', ['error' => $e->getMessage(), 'user_id' => $userId]);
-            return $this->createResponse(false, '出勤打刻に失敗しました。');
+            $context = [
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ];
+            throw new TimecardCreateException($context, $e);
         }
     }
 
@@ -128,32 +139,40 @@ class TimecardService
      * @param int $userId ユーザーID
      * @return array{success: bool, message: string}
      */
-    public function clockOut(int $userId): array
+    public function clockOut(int $userId): void
     {
         $timecard = $this->timecardRepository->getTodayWorkingTimecard($userId);
 
         if (!$timecard) {
-            return $this->createResponse(false, '本日の出勤記録が見つかりません。');
+            $context = ['user_id' => $userId, 'date' => Carbon::now()->toDateString()];
+            throw new ClockInNotFoundException($context);
         }
 
         try {
             $clockIn = Carbon::parse($timecard->clock_in);
             $clockOut = Carbon::now();
 
+            // 勤務時間の計算
             $workTimes = $this->calculateWorkTimes($clockIn, $clockOut, $timecard->break_time);
 
-            $this->timecardRepository->update($timecard, array_merge(
+            $updateData = array_merge(
                 $workTimes,
                 [
-                    'clock_out' => TimeFormatter::formatTime($clockOut),
+                    'clock_out' => $clockOut->toTimeString(),
                     'status' => 'left',
                 ]
-            ));
+            );
 
-            return $this->createResponse(true, '退勤を記録しました。');
+            $this->timecardRepository->update($timecard, $updateData);
+        } catch (InvalidWorkTimeException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            Log::error('退勤打刻エラー', ['error' => $e->getMessage(), 'user_id' => $userId]);
-            return $this->createResponse(false, '退勤打刻に失敗しました。');
+            $context = [
+                'user_id' => $userId,
+                'timecard_id' => $timecard->id,
+                'error' => $e->getMessage()
+            ];
+            throw new TimecardUpdateException($context, $e);
         }
     }
 
@@ -172,11 +191,17 @@ class TimecardService
     private function calculateWorkTimes(Carbon $clockIn, Carbon $clockOut, int $breakTime): array
     {
         try {
+            // 退勤時刻が出勤時刻より前の場合
+            if ($clockOut->lt($clockIn)) {
+                throw new InvalidWorkTimeException([
+                    'clock_in' => $clockIn->toTimeString(),
+                    'clock_out' => $clockOut->toTimeString()
+                ]);
+            }
+
             $workMinutes = $clockIn->diffInMinutes($clockOut);
             $actualWorkMinutes = $workMinutes - $breakTime;
             $overtimeMinutes = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
-
-            $this->logWorkTimeCalculation($clockIn, $clockOut, $workMinutes, $breakTime, $actualWorkMinutes);
 
             return [
                 'actual_work_time' => $actualWorkMinutes,
@@ -184,13 +209,12 @@ class TimecardService
                 'night_work_time' => $this->calculateNightWorkMinutes($clockIn, $clockOut),
             ];
         } catch (\Exception $e) {
-            Log::error('勤務時間計算エラー', [
-                'error' => $e->getMessage(),
-                'clock_in' => $clockIn->format('H:i'),
-                'clock_out' => $clockOut->format('H:i'),
+            $context = [
+                'clock_in' => $clockIn->toTimeString(),
+                'clock_out' => $clockOut->toTimeString(),
                 'break_time' => $breakTime
-            ]);
-            throw $e;
+            ];
+            throw new InvalidWorkTimeException($context, $e);
         }
     }
 
