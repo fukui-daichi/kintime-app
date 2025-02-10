@@ -57,7 +57,6 @@
                     {{-- 申請フォーム --}}
                     <form method="POST" action="{{ route('requests.store') }}" class="space-y-6">
                         @csrf
-                        {{-- 勤怠IDを隠しフィールドとして送信 --}}
                         <input type="hidden" name="timecard_id" value="{{ $formData['timecard_id'] }}">
 
                         {{-- 申請種別の選択 --}}
@@ -74,9 +73,9 @@
                             </select>
                         </div>
 
-                        {{-- 時刻修正用フィールド --}}
-                        <div id="time_correction_fields" class="{{ old('request_type') === 'break_time_modification' ? 'hidden' : '' }}">
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        {{-- 勤怠修正用フィールド --}}
+                        <div id="timecard_fields" class="{{ old('request_type') === 'paid_vacation' ? 'hidden' : '' }}">
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                                 {{-- 出勤時刻 --}}
                                 <div>
                                     <label for="after_clock_in" class="block text-sm font-medium text-gray-700">
@@ -86,10 +85,10 @@
                                         </span>
                                     </label>
                                     <input type="time"
-                                           id="after_clock_in"
-                                           name="after_clock_in"
-                                           value="{{ old('after_clock_in') ?? $formData['clock_in'] }}"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                        id="after_clock_in"
+                                        name="after_clock_in"
+                                        value="{{ old('after_clock_in') ?? $formData['clock_in'] }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
 
                                 {{-- 退勤時刻 --}}
@@ -101,28 +100,42 @@
                                         </span>
                                     </label>
                                     <input type="time"
-                                           id="after_clock_out"
-                                           name="after_clock_out"
-                                           value="{{ old('after_clock_out') ?? $formData['clock_out'] }}"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                        id="after_clock_out"
+                                        name="after_clock_out"
+                                        value="{{ old('after_clock_out') ?? $formData['clock_out'] }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+
+                                {{-- 休憩時間 --}}
+                                <div>
+                                    <label for="after_break_time" class="block text-sm font-medium text-gray-700">
+                                        修正後の休憩時間
+                                        <span class="text-sm text-gray-500">
+                                            （現在：{{ $formattedTimecard['break_time'] }}）
+                                        </span>
+                                    </label>
+                                    <input type="time"
+                                        id="after_break_time"
+                                        name="after_break_time"
+                                        value="{{ old('after_break_time') ?? $formData['break_time'] }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
                             </div>
                         </div>
 
-                        {{-- 休憩時間修正用フィールド --}}
-                        <div id="break_time_fields" class="{{ old('request_type') === 'break_time_modification' ? '' : 'hidden' }}">
+                        {{-- 有給休暇申請用フィールド --}}
+                        <div id="vacation_fields" class="{{ old('request_type') !== 'paid_vacation' ? 'hidden' : '' }}">
                             <div>
-                                <label for="after_break_time" class="block text-sm font-medium text-gray-700">
-                                    修正後の休憩時間
-                                    <span class="text-sm text-gray-500">
-                                        （現在：{{ $formattedTimecard['break_time'] }}）
-                                    </span>
-                                </label>
-                                <input type="time"
-                                       id="after_break_time"
-                                       name="after_break_time"
-                                       value="{{ old('after_break_time') ?? $formData['break_time'] }}"
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <label for="vacation_type" class="block text-sm font-medium text-gray-700">休暇種別</label>
+                                <select id="vacation_type"
+                                        name="vacation_type"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    @foreach($vacationTypes as $value => $label)
+                                        <option value="{{ $value }}" {{ old('vacation_type') == $value ? 'selected' : '' }}>
+                                            {{ $label }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
 
@@ -140,7 +153,7 @@
                         {{-- 送信ボタン --}}
                         <div class="flex justify-end space-x-4">
                             <a href="{{ route('timecard.monthly') }}"
-                               class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                            class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                                 キャンセル
                             </a>
                             <button type="submit"
@@ -149,6 +162,7 @@
                             </button>
                         </div>
                     </form>
+
                 </div>
             </div>
         </div>
@@ -158,15 +172,15 @@
     <script>
         function toggleInputFields() {
             const requestType = document.getElementById('request_type').value;
-            const timeCorrectionFields = document.getElementById('time_correction_fields');
-            const breakTimeFields = document.getElementById('break_time_fields');
+            const timecardFields = document.getElementById('timecard_fields');
+            const vacationFields = document.getElementById('vacation_fields');
 
-            if (requestType === 'time_correction') {
-                timeCorrectionFields.classList.remove('hidden');
-                breakTimeFields.classList.add('hidden');
+            if (requestType === 'timecard') {
+                timecardFields.classList.remove('hidden');
+                vacationFields.classList.add('hidden');
             } else {
-                timeCorrectionFields.classList.add('hidden');
-                breakTimeFields.classList.remove('hidden');
+                timecardFields.classList.add('hidden');
+                vacationFields.classList.remove('hidden');
             }
         }
 

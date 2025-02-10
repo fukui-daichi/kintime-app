@@ -30,7 +30,7 @@ class TimeFormatter
         $hours = floor($minutes / 60);
         $remainingMinutes = $minutes % 60;
 
-        return sprintf('%d:%02d', $hours, $remainingMinutes);
+        return sprintf('%02d:%02d', $hours, $remainingMinutes);
     }
 
     /**

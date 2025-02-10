@@ -71,16 +71,14 @@
                                             @if($request['current_time']['type'] === 'time')
                                                 <div>出勤：{{ $request['current_time']['data']['clock_in'] }}</div>
                                                 <div>退勤：{{ $request['current_time']['data']['clock_out'] }}</div>
-                                            @else
-                                                <div>休憩時間：{{ $request['current_time']['data']['break_time'] }}</div>
+                                                <div>休憩：{{ $request['current_time']['data']['break_time'] }}</div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-900">
                                             @if($request['requested_time']['type'] === 'time')
                                                 <div>出勤：{{ $request['requested_time']['data']['clock_in'] }}</div>
                                                 <div>退勤：{{ $request['requested_time']['data']['clock_out'] }}</div>
-                                            @else
-                                                <div>休憩時間：{{ $request['requested_time']['data']['break_time'] }}</div>
+                                                <div>休憩：{{ $request['requested_time']['data']['break_time'] }}</div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
