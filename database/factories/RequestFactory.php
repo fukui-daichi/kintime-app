@@ -4,70 +4,95 @@ namespace Database\Factories;
 
 use App\Models\User;
 use App\Models\Timecard;
+use App\Models\Request;
+use App\Constants\RequestConstants;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Carbon\Carbon;
 
 class RequestFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = Request::class;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
-        // 既存の勤怠データを取得（ない場合は新規作成）
-        $timecard = Timecard::factory()->create();
-        $targetDate = $timecard->date;
+        // ランダムな勤怠データを取得
+        $timecard = Timecard::inRandomOrder()->first();
+        $targetDate = $timecard ? $timecard->date : now();
 
         return [
-            'user_id' => $timecard->user_id,
-            'approver_id' => User::factory()->state(['user_type' => 'admin']),
-            'request_type' => $this->faker->randomElement(['timecard', 'paid_vacation']),
+            'user_id' => $timecard ? $timecard->user_id : User::factory(),
+            'approver_id' => User::where('user_type', 'admin')->first()?->id,
+            'timecard_id' => $timecard?->id,
+            'request_type' => RequestConstants::REQUEST_TYPE_TIMECARD,
             'target_date' => $targetDate,
-            'status' => $this->faker->randomElement(['pending', 'approved', 'rejected']),
-            'reason' => $this->faker->sentence(),
-            'comment' => $this->faker->optional(0.7)->sentence(),
-            // 勤怠修正用データ
-            'before_clock_in' => $timecard->clock_in,
-            'before_clock_out' => $timecard->clock_out,
-            'after_clock_in' => Carbon::parse($timecard->clock_in)->addMinutes($this->faker->numberBetween(-30, 30)),
-            'after_clock_out' => Carbon::parse($timecard->clock_out)->addMinutes($this->faker->numberBetween(-30, 30)),
-            'before_break_time' => 60,
-            'after_break_time' => $this->faker->randomElement([30, 60, 90]),
-            // 有給休暇用データ
-            'vacation_type' => $this->faker->randomElement(['full', 'am', 'pm']),
-            'approved_at' => $this->faker->optional(0.3)->dateTime(),
+            'status' => RequestConstants::STATUS_PENDING,
+            'reason' => fake()->sentence(),
+            'comment' => null,
+            'before_clock_in' => $timecard?->clock_in,
+            'before_clock_out' => $timecard?->clock_out,
+            'after_clock_in' => $timecard ? Carbon::parse($timecard->clock_in)->addMinutes(rand(-30, 30))->format('H:i:s') : null,
+            'after_clock_out' => $timecard ? Carbon::parse($timecard->clock_out)->addMinutes(rand(-30, 30))->format('H:i:s') : null,
+            'before_break_time' => $timecard?->break_time,
+            'after_break_time' => 60,
+            'vacation_type' => null,
+            'approved_at' => null,
         ];
     }
 
-    // 承認待ち状態の申請を生成
-    public function pending(): static
+    /**
+     * 有給休暇申請の状態を設定
+     */
+    public function paidVacation(): static
     {
         return $this->state(function (array $attributes) {
+            // 有給休暇申請の場合は打刻関連のデータをクリア
             return [
-                'status' => 'pending',
-                'approved_at' => null,
-                'comment' => null,
+                'request_type' => RequestConstants::REQUEST_TYPE_PAID_VACATION,
+                'before_clock_in' => null,
+                'before_clock_out' => null,
+                'after_clock_in' => null,
+                'after_clock_out' => null,
+                'before_break_time' => null,
+                'after_break_time' => null,
+                'vacation_type' => collect(['full', 'am', 'pm'])->random(),
             ];
         });
     }
 
-    // 承認済み状態の申請を生成
+    /**
+     * 承認済み状態を設定
+     */
     public function approved(): static
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'approved',
+                'status' => RequestConstants::STATUS_APPROVED,
                 'approved_at' => now(),
-                'comment' => $this->faker->sentence(),
+                'comment' => fake()->sentence(),
             ];
         });
     }
 
-    // 否認状態の申請を生成
+    /**
+     * 否認状態を設定
+     */
     public function rejected(): static
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'rejected',
+                'status' => RequestConstants::STATUS_REJECTED,
                 'approved_at' => now(),
-                'comment' => $this->faker->sentence(),
+                'comment' => fake()->sentence(),
             ];
         });
     }

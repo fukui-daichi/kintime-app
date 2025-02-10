@@ -4,171 +4,69 @@ namespace App\Services\Request;
 
 use App\Models\Request;
 use App\Models\Timecard;
-use App\Helpers\TimeFormatter;
 use App\Constants\RequestConstants;
 use App\Constants\WorkTimeConstants;
+use App\Helpers\TimeFormatter;
+use App\Repositories\Interfaces\RequestRepositoryInterface;
+use App\Repositories\Interfaces\TimecardRepositoryInterface;
 use Carbon\Carbon;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-/**
- * 申請に関するビジネスロジックを管理するサービスクラス
- */
 class RequestService
 {
-    /************************************
-     * 申請一覧の取得関連
-     ************************************/
+    private $requestRepository;
+    private $timecardRepository;
+
+    public function __construct(
+        RequestRepositoryInterface $requestRepository,
+        TimecardRepositoryInterface $timecardRepository
+    ) {
+        $this->requestRepository = $requestRepository;
+        $this->timecardRepository = $timecardRepository;
+    }
 
     /**
      * 自分の申請一覧を取得
      *
-     * @param int $userId ユーザーID
-     * @param string|null $status フィルター用ステータス
-     * @return array{requests: array, paginator: LengthAwarePaginator}
+     * @param int $userId
+     * @param string|null $status
+     * @return array
      */
     public function getPersonalRequestList(int $userId, ?string $status = null): array
     {
-        $query = $this->buildBaseRequestQuery()
-            ->where('user_id', $userId);
+        $paginator = $this->requestRepository->getPaginatedUserRequests($userId, $status);
 
-        return $this->getRequestListWithPagination($query, $status);
+        return [
+            'requests' => $paginator->items()
+                ? collect($paginator->items())->map(fn($request) => $this->formatRequestData($request))->all()
+                : [],
+            'paginator' => $paginator
+        ];
     }
 
     /**
      * 全ての申請一覧を取得（管理者用）
      *
-     * @param string|null $status フィルター用ステータス
-     * @return array{requests: array, paginator: LengthAwarePaginator}
+     * @param string|null $status
+     * @return array
      */
     public function getAllRequestList(?string $status = null): array
     {
-        $query = $this->buildBaseRequestQuery();
-
-        return $this->getRequestListWithPagination($query, $status);
-    }
-
-    /**
-     * 申請の基本クエリを構築
-     *
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    private function buildBaseRequestQuery(): \Illuminate\Database\Eloquent\Builder
-    {
-        return Request::with(['user', 'approver', 'timecard'])
-            ->latest();
-    }
-
-    /**
-     * ステータスによるフィルタリングを適用
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string|null $status
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    private function applyStatusFilter(
-        \Illuminate\Database\Eloquent\Builder $query,
-        ?string $status
-    ): \Illuminate\Database\Eloquent\Builder {
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
-        return $query;
-    }
-
-    /**
-     * ページネーション付きの申請一覧を取得
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string|null $status
-     * @return array{requests: array, paginator: LengthAwarePaginator}
-     */
-    private function getRequestListWithPagination(
-        \Illuminate\Database\Eloquent\Builder $query,
-        ?string $status
-    ): array {
-        $query = $this->applyStatusFilter($query, $status);
-        $paginator = $query->paginate(RequestConstants::PER_PAGE);
-
-        $formattedRequests = [];
-        foreach ($paginator as $request) {
-            $formattedRequests[] = $this->formatRequestData($request);
-        }
+        $paginator = $this->requestRepository->getPaginatedAllRequests($status);
 
         return [
-            'requests' => $formattedRequests,
+            'requests' => $paginator->items()
+                ? collect($paginator->items())->map(fn($request) => $this->formatRequestData($request))->all()
+                : [],
             'paginator' => $paginator
         ];
     }
 
-    /************************************
-     * データフォーマット関連
-     ************************************/
-
     /**
-     * 申請データを表示用にフォーマット
+     * 申請を作成
      *
-     * @param Request $request
-     * @return array
-     */
-    private function formatRequestData(Request $request): array
-    {
-        $currentTime = $this->formatTimeData($request, 'before');
-        $requestedTime = $this->formatTimeData($request, 'after');
-
-        return [
-            'id' => $request->id,
-            'created_at' => TimeFormatter::formatDate($request->created_at, 'Y/m/d H:i'),
-            'user' => ['name' => $request->user->full_name],
-            'timecard_date' => TimeFormatter::formatDate($request->target_date),
-            'request_type' => RequestConstants::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
-            'current_time' => $currentTime,
-            'requested_time' => $requestedTime,
-            'status' => [
-                'label' => RequestConstants::REQUEST_STATUSES[$request->status] ?? $request->status,
-                'class' => RequestConstants::STATUS_CLASSES[$request->status] ?? 'bg-gray-100 text-gray-800'
-            ]
-        ];
-    }
-
-    /**
-     * 時間データをフォーマット
-     *
-     * @param Request $request
-     * @param string $prefix 'before' or 'after'
-     * @return array
-     */
-    private function formatTimeData(Request $request, string $prefix): array
-    {
-        if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
-            return [
-                'type' => 'time',
-                'data' => [
-                    'clock_in' => TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_in'})),
-                    'clock_out' => TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_out'})),
-                    'break_time' => TimeFormatter::minutesToTime($request->{$prefix.'_break_time'})
-                ]
-            ];
-        }
-
-        return [
-            'type' => 'vacation',
-            'data' => [
-                'vacation_type' => RequestConstants::VACATION_TYPES[$request->vacation_type] ?? '-'
-            ]
-        ];
-    }
-
-    /************************************
-     * 申請の作成・承認関連
-     ************************************/
-
-    /**
-     * 新規申請を作成
-     *
-     * @param array $data 申請データ
+     * @param array $data
      * @return Request
      * @throws \Exception
      */
@@ -176,10 +74,11 @@ class RequestService
     {
         try {
             return DB::transaction(function () use ($data) {
-                $request = Request::create($data);
+                $request = $this->requestRepository->create($data);
 
                 if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
-                    $request->timecard->update(['status' => 'pending_approval']);
+                    $timecard = $this->timecardRepository->findById($request->timecard_id);
+                    $timecard->update(['status' => 'pending_approval']);
                 }
 
                 return $request;
@@ -191,9 +90,9 @@ class RequestService
     }
 
     /**
-     * 申請を承認する
+     * 申請を承認
      *
-     * @param Request $request 承認対象の申請
+     * @param Request $request
      * @return bool
      * @throws \Exception
      */
@@ -201,7 +100,7 @@ class RequestService
     {
         try {
             DB::transaction(function () use ($request) {
-                $request->update([
+                $this->requestRepository->update($request, [
                     'status' => RequestConstants::STATUS_APPROVED,
                     'approved_at' => now()
                 ]);
@@ -222,7 +121,7 @@ class RequestService
     }
 
     /**
-     * 申請を否認する
+     * 申請を否認
      *
      * @param Request $request
      * @return bool
@@ -232,13 +131,14 @@ class RequestService
     {
         try {
             DB::transaction(function () use ($request) {
-                $request->update([
+                $this->requestRepository->update($request, [
                     'status' => RequestConstants::STATUS_REJECTED,
                     'approved_at' => now()
                 ]);
 
                 if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
-                    $request->timecard->update(['status' => 'left']);
+                    $timecard = $this->timecardRepository->findById($request->timecard_id);
+                    $timecard->update(['status' => 'left']);
                 }
             });
 
@@ -253,14 +153,143 @@ class RequestService
     }
 
     /**
-     * 勤怠修正申請の内容を適用する
+     * 申請フォーム用のデータを取得
+     *
+     * @param Timecard $timecard
+     * @return array
+     */
+    public function getFormData(Timecard $timecard): array
+    {
+        $formattedTimecard = $this->formatTimecardDataForDisplay($timecard);
+
+        return [
+            'currentTimecard' => $this->formatTimecardData($timecard),
+            'formattedTimecard' => $formattedTimecard,
+            'formData' => [
+                'timecard_id' => $timecard->id,
+                'clock_in' => $timecard->clock_in ? substr($timecard->clock_in, 0, 5) : null,
+                'clock_out' => $timecard->clock_out ? substr($timecard->clock_out, 0, 5) : null,
+                'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
+            ],
+            'requestTypes' => RequestConstants::REQUEST_TYPES,
+            'vacationTypes' => RequestConstants::VACATION_TYPES,
+        ];
+    }
+
+    /**
+     * 申請データを表示用にフォーマット
+     *
+     * @param Request $request
+     * @return array
+     */
+    private function formatRequestData(Request $request): array
+    {
+        $currentTime = $this->formatTimeData($request, 'before');
+        $requestedTime = $this->formatTimeData($request, 'after');
+
+        return [
+            'id' => $request->id,
+            'created_at' => Carbon::parse($request->created_at)->format('Y/m/d H:i'),
+            'user' => [
+                'name' => $request->user->full_name
+            ],
+            'timecard_date' => Carbon::parse($request->target_date)->format('Y/m/d'),
+            'request_type' => RequestConstants::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
+            'current_time' => $currentTime,
+            'requested_time' => $requestedTime,
+            'status' => [
+                'label' => RequestConstants::REQUEST_STATUSES[$request->status] ?? $request->status,
+                'class' => RequestConstants::STATUS_CLASSES[$request->status] ?? ''
+            ]
+        ];
+    }
+
+    /**
+     * 時間データをフォーマット
+     *
+     * @param Request $request
+     * @param string $prefix
+     * @return array
+     */
+    private function formatTimeData(Request $request, string $prefix): array
+    {
+        if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
+            return [
+                'type' => 'time',
+                'data' => [
+                    'clock_in' => $request->{$prefix.'_clock_in'}
+                        ? Carbon::parse($request->{$prefix.'_clock_in'})->format('H:i')
+                        : null,
+                    'clock_out' => $request->{$prefix.'_clock_out'}
+                        ? Carbon::parse($request->{$prefix.'_clock_out'})->format('H:i')
+                        : null,
+                    'break_time' => TimeFormatter::minutesToTime($request->{$prefix.'_break_time'})
+                ]
+            ];
+        }
+
+        return [
+            'type' => 'vacation',
+            'data' => [
+                'vacation_type' => RequestConstants::VACATION_TYPES[$request->vacation_type] ?? null
+            ]
+        ];
+    }
+
+    /**
+     * 勤怠データをフォーマット
+     *
+     * @param Timecard $timecard
+     * @return array
+     */
+    private function formatTimecardData(Timecard $timecard): array
+    {
+        return [
+            'date' => $timecard->date->format('Y年m月d日'),
+            'clock_in' => $timecard->clock_in
+                ? Carbon::parse($timecard->clock_in)->format('H:i')
+                : '未打刻',
+            'clock_out' => $timecard->clock_out
+                ? Carbon::parse($timecard->clock_out)->format('H:i')
+                : '未打刻',
+            'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
+            'actual_work_time' => TimeFormatter::minutesToTime($timecard->actual_work_time)
+        ];
+    }
+
+    /**
+     * 申請フォーム表示用に勤怠データをフォーマット
+     *
+     * @param Timecard $timecard
+     * @return array
+     */
+    private function formatTimecardDataForDisplay(Timecard $timecard): array
+    {
+        return [
+            'clock_in' => $timecard->clock_in
+                ? Carbon::parse($timecard->clock_in)->format('H:i')
+                : '-',
+            'clock_out' => $timecard->clock_out
+                ? Carbon::parse($timecard->clock_out)->format('H:i')
+                : '-',
+            'break_time' => $timecard->break_time
+                ? sprintf('%d時間', $timecard->break_time / 60)
+                : '-'
+        ];
+    }
+
+    /**
+     * 勤怠修正申請の内容を適用
      *
      * @param Request $request
      * @return bool
      */
     private function updateTimecard(Request $request): bool
     {
-        $timecard = Timecard::find($request->timecard_id);
+        $timecard = $this->timecardRepository->findById($request->timecard_id);
+        if (!$timecard) {
+            throw new \Exception('勤怠データが見つかりません');
+        }
 
         $updateData = [
             'status' => 'left'
@@ -278,38 +307,54 @@ class RequestService
         }
 
         // 勤務時間の再計算
-        $this->recalculateWorkTime($timecard, $updateData);
+        if (isset($updateData['clock_in']) || isset($updateData['clock_out']) || isset($updateData['break_time'])) {
+            $clockIn = isset($updateData['clock_in'])
+                ? Carbon::parse($updateData['clock_in'])
+                : Carbon::parse($timecard->clock_in);
 
-        return $timecard->update($updateData);
+            $clockOut = isset($updateData['clock_out'])
+                ? Carbon::parse($updateData['clock_out'])
+                : Carbon::parse($timecard->clock_out);
+
+            $breakTime = $updateData['break_time'] ?? $timecard->break_time;
+
+            $this->recalculateWorkTime($clockIn, $clockOut, $breakTime, $updateData);
+        }
+
+        return $this->timecardRepository->update($timecard, $updateData);
     }
 
     /**
      * 勤務時間を再計算
      *
-     * @param Timecard $timecard
-     * @param array $updateData 更新データ（参照渡し）
+     * @param Carbon $clockIn
+     * @param Carbon $clockOut
+     * @param int $breakTime
+     * @param array &$updateData
      * @return void
      */
-    private function recalculateWorkTime(Timecard $timecard, array &$updateData): void
-    {
-        $clockIn = isset($updateData['clock_in'])
-            ? Carbon::parse($updateData['clock_in'])
-            : $timecard->clock_in;
-
-        $clockOut = isset($updateData['clock_out'])
-            ? Carbon::parse($updateData['clock_out'])
-            : $timecard->clock_out;
-
-        $breakTime = $updateData['break_time'] ?? $timecard->break_time;
-
-        if ($clockIn && $clockOut) {
-            $workMinutes = $clockIn->diffInMinutes($clockOut);
+    private function recalculateWorkTime(
+        Carbon $clockIn,
+        Carbon $clockOut,
+        int $breakTime,
+        array &$updateData
+    ): void {
+        try {
+            $workMinutes = $clockIn->copy()->diffInMinutes($clockOut);
             $actualWorkMinutes = $workMinutes - $breakTime;
-            $overtimeMinutes = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
 
             $updateData['actual_work_time'] = $actualWorkMinutes;
-            $updateData['overtime'] = $overtimeMinutes;
+            $updateData['overtime'] = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
             $updateData['night_work_time'] = $this->calculateNightWorkTime($clockIn, $clockOut);
+
+        } catch (\Exception $e) {
+            Log::error('勤務時間計算エラー', [
+                'clock_in' => $clockIn->toDateTimeString(),
+                'clock_out' => $clockOut->toDateTimeString(),
+                'break_time' => $breakTime,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
         }
     }
 
@@ -322,85 +367,25 @@ class RequestService
      */
     private function calculateNightWorkTime(Carbon $clockIn, Carbon $clockOut): int
     {
+        $nightWorkMinutes = 0;
+        $currentTime = $clockIn->copy();
+        $endTime = $clockOut->copy();
+
         // 日付をまたぐ場合は翌日の日付に調整
         if ($clockOut->lt($clockIn)) {
-            $clockOut->addDay();
+            $endTime->addDay();
         }
 
-        $nightWorkMinutes = 0;
-        $currentDate = $clockIn->copy()->startOfDay();
-        $dates = [$currentDate];
-
-        // 日付をまたぐ場合は翌日も追加
-        if ($clockOut->day !== $clockIn->day) {
-            $dates[] = $currentDate->copy()->addDay();
-        }
-
-        foreach ($dates as $date) {
-            // 深夜時間帯の開始時刻（22:00）
-            $nightStart = $date->copy()->setHour(WorkTimeConstants::NIGHT_WORK_START_HOUR)->setMinute(0);
-            // 深夜時間帯の終了時刻（翌5:00）
-            $nightEnd = $date->copy()->addDay()->setHour(WorkTimeConstants::NIGHT_WORK_END_HOUR)->setMinute(0);
-
-            // その日の深夜時間帯と勤務時間の重なりを計算
-            $periodStart = max($clockIn, $nightStart);
-            $periodEnd = min($clockOut, $nightEnd);
-
-            if ($periodEnd->gt($periodStart)) {
-                $nightWorkMinutes += $periodStart->diffInMinutes($periodEnd);
+        while ($currentTime->lt($endTime)) {
+            $hour = (int)$currentTime->format('H');
+            if ($hour >= WorkTimeConstants::NIGHT_WORK_START_HOUR ||
+                $hour < WorkTimeConstants::NIGHT_WORK_END_HOUR) {
+                $nightWorkMinutes++;
             }
+            $currentTime->addMinute();
         }
 
         return $nightWorkMinutes;
-    }
-
-    /************************************
-     * フォームデータ関連
-     ************************************/
-
-    /**
-     * フォーム表示用のデータを取得
-     *
-     * @param Timecard $timecard
-     * @return array
-     */
-    public function getFormData(Timecard $timecard): array
-    {
-        return [
-            'timecard' => $this->formatTimecardData($timecard),
-            'requestTypes' => RequestConstants::REQUEST_TYPES,
-            'vacationTypes' => RequestConstants::VACATION_TYPES,
-        ];
-    }
-
-    /**
-     * 勤怠データをフォーマット
-     *
-     * @param Timecard $timecard
-     * @return array
-     */
-    private function formatTimecardData(Timecard $timecard): array
-    {
-        $clockIn = TimeFormatter::formatTime($timecard->clock_in);
-        $clockOut = TimeFormatter::formatTime($timecard->clock_out);
-        $breakTime = TimeFormatter::minutesToTime($timecard->break_time);
-        $actualWorkTime = TimeFormatter::minutesToTime($timecard->actual_work_time);
-
-        return [
-            'id' => $timecard->id,
-            'date' => TimeFormatter::formatDate($timecard->date, 'Y年m月d日'),
-            'current' => [
-                'clock_in' => $clockIn ?? '未打刻',
-                'clock_out' => $clockOut ?? '未打刻',
-                'break_time' => $breakTime,
-                'actual_work_time' => $actualWorkTime
-            ],
-            'form_values' => [
-                'clock_in' => $clockIn,
-                'clock_out' => $clockOut,
-                'break_time' => $breakTime
-            ]
-        ];
     }
 
     /**
@@ -411,7 +396,22 @@ class RequestService
      */
     public function canUpdateTimecard(Timecard $timecard): bool
     {
-        return !$timecard->hasPendingRequest() &&
-               $timecard->status !== Timecard::STATUS_PENDING_APPROVAL;
+        return !$this->requestRepository->getPendingRequestByTimecardId($timecard->id);
+    }
+
+    /**
+     * エラーレスポンスを作成
+     *
+     * @param string $message
+     * @param array $context
+     * @return array
+     */
+    private function createErrorResponse(string $message, array $context = []): array
+    {
+        Log::error($message, $context);
+        return [
+            'success' => false,
+            'message' => $message
+        ];
     }
 }

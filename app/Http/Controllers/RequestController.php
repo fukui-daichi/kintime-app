@@ -13,30 +13,17 @@ use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 
-/**
- * 申請関連の処理を担当するコントローラー
- */
 class RequestController extends Controller
 {
-    /**
-     * @var RequestService
-     */
     private $requestService;
 
-    /**
-     * コンストラクタ
-     *
-     * @param RequestService $requestService
-     */
     public function __construct(RequestService $requestService)
     {
         $this->requestService = $requestService;
     }
 
     /**
-     * ユーザー種別に応じた申請一覧を表示
-     * 管理者：すべての申請を表示（ステータスでフィルタリング可能）
-     * 一般ユーザー：自分の申請のみ表示
+     * 申請一覧を表示
      *
      * @param HttpRequest $request
      * @return View
@@ -47,14 +34,14 @@ class RequestController extends Controller
         $currentStatus = $request->query('status', RequestConstants::DEFAULT_STATUS);
 
         if ($user->user_type === 'admin') {
-            // 管理者の場合
             $result = $this->requestService->getAllRequestList($currentStatus);
+            $view = 'admin.requests.index';
         } else {
-            // 一般ユーザーの場合
             $result = $this->requestService->getPersonalRequestList($user->id, $currentStatus);
+            $view = 'user.requests.index';
         }
 
-        return view($user->user_type === 'admin' ? 'admin.requests.index' : 'user.requests.index', [
+        return view($view, [
             'requests' => $result['requests'],
             'paginator' => $result['paginator'],
             'statusList' => RequestConstants::STATUS_LIST,
@@ -68,17 +55,13 @@ class RequestController extends Controller
      * @param Timecard $timecard
      * @return View|RedirectResponse
      */
-    public function create(Timecard $timecard)
+    public function create(Timecard $timecard): View|RedirectResponse
     {
-        // 申請可能か確認
         if (!$this->requestService->canUpdateTimecard($timecard)) {
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
-        // フォームデータを取得
-        $viewData = $this->requestService->getFormData($timecard);
-
-        return view('user.requests.create', $viewData);
+        return view('user.requests.create', $this->requestService->getFormData($timecard));
     }
 
     /**
@@ -90,14 +73,12 @@ class RequestController extends Controller
     public function store(CreateRequest $request): RedirectResponse
     {
         try {
-            // 申請データを作成
             $this->requestService->createRequest($request->validatedData());
-
-            return redirect()->route('requests.index')
+            return redirect()
+                ->route('requests.index')
                 ->with('success', '申請を送信しました');
         } catch (\Exception $e) {
             Log::error('申請作成エラー: ' . $e->getMessage());
-
             return back()
                 ->with('error', '申請の送信に失敗しました')
                 ->withInput();
@@ -136,24 +117,5 @@ class RequestController extends Controller
             Log::error('否認処理エラー: ' . $e->getMessage());
             return back()->with('error', '申請の否認に失敗しました');
         }
-    }
-
-    /**
-     * エラー処理の共通メソッド
-     *
-     * @param \Exception $e 発生した例外
-     * @param string $message エラーメッセージ
-     * @return RedirectResponse
-     */
-    private function handleRequestError(\Exception $e, string $message): RedirectResponse
-    {
-        Log::error('申請処理エラー', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return back()
-            ->with('error', $message)
-            ->withInput();
     }
 }

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('approver_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('timecard_id')->constrained()->onDelete('cascade');  // 追加
             $table->enum('request_type', ['timecard', 'paid_vacation']);
             $table->date('target_date');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
@@ -37,6 +38,7 @@ return new class extends Migration
             $table->index(['approver_id', 'status']);
             $table->index('target_date');
             $table->index('approved_at');
+            $table->index('timecard_id');  // 追加
         });
     }
 
