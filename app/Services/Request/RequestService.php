@@ -4,7 +4,6 @@ namespace App\Services\Request;
 
 use App\Models\Request;
 use App\Models\Timecard;
-use App\Models\User;
 use App\Helpers\TimeFormatter;
 use App\Constants\RequestConstants;
 use App\Constants\WorkTimeConstants;
@@ -116,51 +115,22 @@ class RequestService
      */
     private function formatRequestData(Request $request): array
     {
+        $currentTime = $this->formatTimeData($request, 'before');
+        $requestedTime = $this->formatTimeData($request, 'after');
+
         return [
             'id' => $request->id,
-            'created_at' => $this->formatDateTime($request->created_at),
-            'user' => $this->formatUserData($request->user),
+            'created_at' => TimeFormatter::formatDate($request->created_at, 'Y/m/d H:i'),
+            'user' => ['name' => $request->user->full_name],
             'timecard_date' => TimeFormatter::formatDate($request->target_date),
-            'request_type' => $this->formatRequestType($request->request_type),
-            'current_time' => $this->formatTimeData($request, 'before'),
-            'requested_time' => $this->formatTimeData($request, 'after'),
-            'status' => $this->formatStatus($request->status),
+            'request_type' => RequestConstants::REQUEST_TYPES[$request->request_type] ?? $request->request_type,
+            'current_time' => $currentTime,
+            'requested_time' => $requestedTime,
+            'status' => [
+                'label' => RequestConstants::REQUEST_STATUSES[$request->status] ?? $request->status,
+                'class' => RequestConstants::STATUS_CLASSES[$request->status] ?? 'bg-gray-100 text-gray-800'
+            ]
         ];
-    }
-
-    /**
-     * 日時をフォーマット
-     *
-     * @param Carbon $dateTime
-     * @return string
-     */
-    private function formatDateTime(Carbon $dateTime): string
-    {
-        return TimeFormatter::formatDate($dateTime, 'Y/m/d H:i');
-    }
-
-    /**
-     * ユーザー情報をフォーマット
-     *
-     * @param User $user
-     * @return array
-     */
-    private function formatUserData(User $user): array
-    {
-        return [
-            'name' => $user->full_name,
-        ];
-    }
-
-    /**
-     * 申請種別をフォーマット
-     *
-     * @param string $requestType
-     * @return string
-     */
-    private function formatRequestType(string $requestType): string
-    {
-        return RequestConstants::REQUEST_TYPES[$requestType] ?? $requestType;
     }
 
     /**
@@ -173,64 +143,21 @@ class RequestService
     private function formatTimeData(Request $request, string $prefix): array
     {
         if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
-            return $this->formatTimecardData($request, $prefix);
+            return [
+                'type' => 'time',
+                'data' => [
+                    'clock_in' => TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_in'})),
+                    'clock_out' => TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_out'})),
+                    'break_time' => TimeFormatter::minutesToTime($request->{$prefix.'_break_time'})
+                ]
+            ];
         }
 
-        return $this->formatVacationData($request);
-    }
-
-    /**
-     * 勤怠修正データをフォーマット
-     *
-     * @param Request $request
-     * @param string $prefix
-     * @return array
-     */
-    private function formatTimecardData(Request $request, string $prefix): array
-    {
-        return [
-            'type' => 'time',
-            'data' => [
-                'clock_in' => $request->{$prefix.'_clock_in'}
-                    ? TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_in'}))
-                    : '-',
-                'clock_out' => $request->{$prefix.'_clock_out'}
-                    ? TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_out'}))
-                    : '-',
-                'break_time' => $request->{$prefix.'_break_time'}
-                    ? TimeFormatter::minutesToTime($request->{$prefix.'_break_time'})
-                    : '-'
-            ]
-        ];
-    }
-
-    /**
-     * 有給休暇データをフォーマット
-     *
-     * @param Request $request
-     * @return array
-     */
-    private function formatVacationData(Request $request): array
-    {
         return [
             'type' => 'vacation',
             'data' => [
                 'vacation_type' => RequestConstants::VACATION_TYPES[$request->vacation_type] ?? '-'
             ]
-        ];
-    }
-
-    /**
-     * ステータスをフォーマット
-     *
-     * @param string $status
-     * @return array
-     */
-    private function formatStatus(string $status): array
-    {
-        return [
-            'label' => RequestConstants::REQUEST_STATUSES[$status] ?? $status,
-            'class' => RequestConstants::STATUS_CLASSES[$status] ?? 'bg-gray-100 text-gray-800'
         ];
     }
 
@@ -395,21 +322,33 @@ class RequestService
      */
     private function calculateNightWorkTime(Carbon $clockIn, Carbon $clockOut): int
     {
-        $nightWorkMinutes = 0;
-        $currentTime = $clockIn->copy();
-        $endTime = $clockOut->copy();
-
+        // 日付をまたぐ場合は翌日の日付に調整
         if ($clockOut->lt($clockIn)) {
-            $endTime->addDay();
+            $clockOut->addDay();
         }
 
-        while ($currentTime->lt($endTime)) {
-            $hour = (int)$currentTime->format('H');
-            if ($hour >= WorkTimeConstants::NIGHT_WORK_START_HOUR ||
-                $hour < WorkTimeConstants::NIGHT_WORK_END_HOUR) {
-                $nightWorkMinutes++;
+        $nightWorkMinutes = 0;
+        $currentDate = $clockIn->copy()->startOfDay();
+        $dates = [$currentDate];
+
+        // 日付をまたぐ場合は翌日も追加
+        if ($clockOut->day !== $clockIn->day) {
+            $dates[] = $currentDate->copy()->addDay();
+        }
+
+        foreach ($dates as $date) {
+            // 深夜時間帯の開始時刻（22:00）
+            $nightStart = $date->copy()->setHour(WorkTimeConstants::NIGHT_WORK_START_HOUR)->setMinute(0);
+            // 深夜時間帯の終了時刻（翌5:00）
+            $nightEnd = $date->copy()->addDay()->setHour(WorkTimeConstants::NIGHT_WORK_END_HOUR)->setMinute(0);
+
+            // その日の深夜時間帯と勤務時間の重なりを計算
+            $periodStart = max($clockIn, $nightStart);
+            $periodEnd = min($clockOut, $nightEnd);
+
+            if ($periodEnd->gt($periodStart)) {
+                $nightWorkMinutes += $periodStart->diffInMinutes($periodEnd);
             }
-            $currentTime->addMinute();
         }
 
         return $nightWorkMinutes;
@@ -428,75 +367,40 @@ class RequestService
     public function getFormData(Timecard $timecard): array
     {
         return [
-            'currentTimecard' => $this->getCurrentTimecardData($timecard),
-            'formData' => $this->getFormDefaultValues($timecard),
-            'requestTypes' => $this->getRequestTypeOptions(),
-            'vacationTypes' => $this->getVacationTypeOptions(),
-            'formattedTimecard' => [
-                'id' => $timecard->id,
-                'clock_in' => TimeFormatter::formatTime($timecard->clock_in),
-                'clock_out' => TimeFormatter::formatTime($timecard->clock_out),
-                'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
-                'raw_timecard' => $timecard,
-            ],
+            'timecard' => $this->formatTimecardData($timecard),
+            'requestTypes' => RequestConstants::REQUEST_TYPES,
+            'vacationTypes' => RequestConstants::VACATION_TYPES,
         ];
     }
 
     /**
-     * 現在の勤怠情報を取得
+     * 勤怠データをフォーマット
      *
      * @param Timecard $timecard
      * @return array
      */
-    private function getCurrentTimecardData(Timecard $timecard): array
+    private function formatTimecardData(Timecard $timecard): array
     {
+        $clockIn = TimeFormatter::formatTime($timecard->clock_in);
+        $clockOut = TimeFormatter::formatTime($timecard->clock_out);
+        $breakTime = TimeFormatter::minutesToTime($timecard->break_time);
+        $actualWorkTime = TimeFormatter::minutesToTime($timecard->actual_work_time);
+
         return [
+            'id' => $timecard->id,
             'date' => TimeFormatter::formatDate($timecard->date, 'Y年m月d日'),
-            'clock_in' => $timecard->clock_in
-                ? TimeFormatter::formatTime($timecard->clock_in)
-                : '未打刻',
-            'clock_out' => $timecard->clock_out
-                ? TimeFormatter::formatTime($timecard->clock_out)
-                : '未打刻',
-            'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
-            'actual_work_time' => TimeFormatter::minutesToTime($timecard->actual_work_time)
+            'current' => [
+                'clock_in' => $clockIn ?? '未打刻',
+                'clock_out' => $clockOut ?? '未打刻',
+                'break_time' => $breakTime,
+                'actual_work_time' => $actualWorkTime
+            ],
+            'form_values' => [
+                'clock_in' => $clockIn,
+                'clock_out' => $clockOut,
+                'break_time' => $breakTime
+            ]
         ];
-    }
-
-    /**
-     * フォームのデフォルト値を取得
-     *
-     * @param Timecard $timecard
-     * @return array
-     */
-    private function getFormDefaultValues(Timecard $timecard): array
-    {
-        return [
-            'timecard_id' => $timecard->id,
-            'clock_in' => $timecard->clock_in?->format('H:i'),
-            'clock_out' => $timecard->clock_out?->format('H:i'),
-            'break_time' => TimeFormatter::minutesToTime($timecard->break_time)
-        ];
-    }
-
-    /**
-     * 申請種別の選択肢を取得
-     *
-     * @return array<string, string>
-     */
-    private function getRequestTypeOptions(): array
-    {
-        return RequestConstants::REQUEST_TYPES;
-    }
-
-    /**
-     * 有給休暇種別の選択肢を取得
-     *
-     * @return array<string, string>
-     */
-    private function getVacationTypeOptions(): array
-    {
-        return RequestConstants::VACATION_TYPES;
     }
 
     /**
