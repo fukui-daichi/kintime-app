@@ -68,6 +68,11 @@ class Request extends Model
         return $this->belongsTo(User::class, 'approver_id');
     }
 
+    public function timecard(): BelongsTo
+    {
+        return $this->belongsTo(Timecard::class, 'target_date', 'date');
+    }
+
     // statusやrequest_typeに関するヘルパーメソッドを追加
     public function isPending(): bool
     {

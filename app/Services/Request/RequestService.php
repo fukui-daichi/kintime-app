@@ -57,7 +57,7 @@ class RequestService
      */
     private function buildBaseRequestQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return Request::with(['user', 'timecard', 'approver'])
+        return Request::with(['user', 'approver', 'timecard'])
             ->latest();
     }
 
@@ -188,16 +188,18 @@ class RequestService
      */
     private function formatTimecardData(Request $request, string $prefix): array
     {
-        $clockIn = $request->{$prefix.'_clock_in'};
-        $clockOut = $request->{$prefix.'_clock_out'};
-        $breakTime = $request->{$prefix.'_break_time'};
-
         return [
-            'type' => 'timecard',
+            'type' => 'time',
             'data' => [
-                'clock_in' => $clockIn ? TimeFormatter::formatTime(Carbon::parse($clockIn)) : '-',
-                'clock_out' => $clockOut ? TimeFormatter::formatTime(Carbon::parse($clockOut)) : '-',
-                'break_time' => $breakTime ? TimeFormatter::minutesToTime($breakTime) : '-',
+                'clock_in' => $request->{$prefix.'_clock_in'}
+                    ? TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_in'}))
+                    : '-',
+                'clock_out' => $request->{$prefix.'_clock_out'}
+                    ? TimeFormatter::formatTime(Carbon::parse($request->{$prefix.'_clock_out'}))
+                    : '-',
+                'break_time' => $request->{$prefix.'_break_time'}
+                    ? TimeFormatter::minutesToTime($request->{$prefix.'_break_time'})
+                    : '-'
             ]
         ];
     }

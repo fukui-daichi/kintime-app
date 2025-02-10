@@ -77,16 +77,18 @@
                                             @if($request['current_time']['type'] === 'time')
                                                 <div>出勤：{{ $request['current_time']['data']['clock_in'] }}</div>
                                                 <div>退勤：{{ $request['current_time']['data']['clock_out'] }}</div>
-                                            @else
-                                                <div>休憩時間：{{ $request['current_time']['data']['break_time'] }}</div>
+                                                <div>休憩：{{ $request['current_time']['data']['break_time'] }}</div>
+                                            @elseif($request['current_time']['type'] === 'vacation')
+                                                <div>休暇種別：{{ $request['current_time']['data']['vacation_type'] }}</div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-900">
                                             @if($request['requested_time']['type'] === 'time')
                                                 <div>出勤：{{ $request['requested_time']['data']['clock_in'] }}</div>
                                                 <div>退勤：{{ $request['requested_time']['data']['clock_out'] }}</div>
-                                            @else
-                                                <div>休憩時間：{{ $request['requested_time']['data']['break_time'] }}</div>
+                                                <div>休憩：{{ $request['requested_time']['data']['break_time'] }}</div>
+                                            @elseif($request['requested_time']['type'] === 'vacation')
+                                                <div>休暇種別：{{ $request['requested_time']['data']['vacation_type'] }}</div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -97,7 +99,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             @if(($request['status']['label'] ?? '') === '承認待ち')
                                                 <div class="flex space-x-2">
-                                                    <form action="{{ route('requests.approve', ['modificationRequest' => $request['id']]) }}"
+                                                    <form action="{{ route('requests.approve', ['request' => $request['id']]) }}"
                                                           method="POST"
                                                           class="inline">
                                                         @csrf
@@ -109,7 +111,7 @@
                                                         </button>
                                                     </form>
 
-                                                    <form action="{{ route('requests.reject', ['modificationRequest' => $request['id']]) }}"
+                                                    <form action="{{ route('requests.reject', ['request' => $request['id']]) }}"
                                                           method="POST"
                                                           class="inline">
                                                         @csrf

@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\TimecardController;
-use App\Http\Controllers\ModificationRequestController;
+use App\Http\Controllers\RequestController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -28,13 +28,14 @@ Route::middleware('auth')->group(function () {
 
     // 申請関連のルート
     Route::prefix('requests')->name('requests.')->middleware('auth')->group(function () {
-        Route::get('/', [ModificationRequestController::class, 'index'])->name('index');
-        Route::get('/create/{timecard}', [ModificationRequestController::class, 'create'])->name('create');
-        Route::post('/', [ModificationRequestController::class, 'store'])->name('store');
+        Route::get('/', [RequestController::class, 'index'])->name('index');
+        Route::get('/create/{timecard}', [RequestController::class, 'create'])->name('create');
+        Route::post('/', [RequestController::class, 'store'])->name('store');
 
+        // 管理者専用ルート
         Route::middleware('admin')->group(function () {
-            Route::patch('/{modificationRequest}/approve', [ModificationRequestController::class, 'approve'])->name('approve');
-            Route::patch('/{modificationRequest}/reject', [ModificationRequestController::class, 'reject'])->name('reject');
+            Route::patch('/{request}/approve', [RequestController::class, 'approve'])->name('approve');
+            Route::patch('/{request}/reject', [RequestController::class, 'reject'])->name('reject');
         });
     });
 });
