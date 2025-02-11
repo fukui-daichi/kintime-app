@@ -73,6 +73,33 @@ class RequestService
     public function createRequest(array $data): Request
     {
         try {
+            // 休憩時間を時刻形式から分単位に変換
+            if (isset($data['after_break_time'])) {
+                $data['after_break_time'] = TimeFormatter::timeToMinutes($data['after_break_time']);
+            }
+
+            // 時刻データの整形
+            if (isset($data['after_clock_in'])) {
+                $data['after_clock_in'] = TimeFormatter::convertToDateTime(
+                    $data['after_clock_in'],
+                    Carbon::parse($data['target_date'])->format('Y-m-d')
+                );
+            }
+
+            if (isset($data['after_clock_out'])) {
+                $data['after_clock_out'] = TimeFormatter::convertToDateTime(
+                    $data['after_clock_out'],
+                    Carbon::parse($data['target_date'])->format('Y-m-d')
+                );
+            }
+
+            Log::debug('申請データ（変換後）', [
+                'input_data' => $data,
+                'after_break_time_minutes' => $data['after_break_time'] ?? null,
+                'formatted_clock_in' => $data['after_clock_in'] ?? null,
+                'formatted_clock_out' => $data['after_clock_out'] ?? null
+            ]);
+
             return DB::transaction(function () use ($data) {
                 $request = $this->requestRepository->create($data);
 
@@ -84,7 +111,11 @@ class RequestService
                 return $request;
             });
         } catch (\Exception $e) {
-            Log::error('申請作成エラー', ['error' => $e->getMessage()]);
+            Log::error('申請作成エラー（サービス）', [
+                'error' => $e->getMessage(),
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
             throw $e;
         }
     }
@@ -286,42 +317,75 @@ class RequestService
      */
     private function updateTimecard(Request $request): bool
     {
-        $timecard = $this->timecardRepository->findById($request->timecard_id);
-        if (!$timecard) {
-            throw new \Exception('勤怠データが見つかりません');
+        try {
+            $timecard = $this->timecardRepository->findById($request->timecard_id);
+            if (!$timecard) {
+                throw new \Exception('勤怠データが見つかりません');
+            }
+
+            Log::debug('勤怠更新データ（前）', [
+                'request_id' => $request->id,
+                'timecard_date' => $timecard->date->format('Y-m-d'),
+                'after_clock_in' => $request->after_clock_in,
+                'after_clock_out' => $request->after_clock_out,
+                'after_break_time' => $request->after_break_time
+            ]);
+
+            $updateData = [
+                'status' => 'left'
+            ];
+
+            // 時刻の更新
+            if ($request->after_clock_in) {
+                // 日付と時刻を結合して正しいフォーマットに
+                $updateData['clock_in'] = TimeFormatter::convertToDateTime(
+                    $request->after_clock_in,
+                    $timecard->date->format('Y-m-d')
+                );
+            }
+
+            if ($request->after_clock_out) {
+                $updateData['clock_out'] = TimeFormatter::convertToDateTime(
+                    $request->after_clock_out,
+                    $timecard->date->format('Y-m-d')
+                );
+            }
+
+            if ($request->after_break_time) {
+                // 休憩時間は分単位の整数として保存
+                $updateData['break_time'] = TimeFormatter::timeToMinutes($request->after_break_time);
+            }
+
+            // 勤務時間の再計算
+            if (isset($updateData['clock_in']) || isset($updateData['clock_out']) || isset($updateData['break_time'])) {
+                $clockIn = isset($updateData['clock_in'])
+                    ? Carbon::parse($updateData['clock_in'])
+                    : Carbon::parse($timecard->clock_in);
+
+                $clockOut = isset($updateData['clock_out'])
+                    ? Carbon::parse($updateData['clock_out'])
+                    : Carbon::parse($timecard->clock_out);
+
+                $breakTime = $updateData['break_time'] ?? $timecard->break_time;
+
+                $this->recalculateWorkTime($clockIn, $clockOut, $breakTime, $updateData);
+            }
+
+            Log::debug('勤怠更新データ（後）', [
+                'update_data' => $updateData,
+                'converted_clock_in' => $updateData['clock_in'] ?? null,
+                'converted_clock_out' => $updateData['clock_out'] ?? null
+            ]);
+
+            return $this->timecardRepository->update($timecard, $updateData);
+        } catch (\Exception $e) {
+            Log::error('勤怠データ更新エラー', [
+                'request_id' => $request->id,
+                'timecard_id' => $request->timecard_id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
         }
-
-        $updateData = [
-            'status' => 'left'
-        ];
-
-        // 時刻の更新
-        if ($request->after_clock_in) {
-            $updateData['clock_in'] = $request->after_clock_in;
-        }
-        if ($request->after_clock_out) {
-            $updateData['clock_out'] = $request->after_clock_out;
-        }
-        if ($request->after_break_time) {
-            $updateData['break_time'] = $request->after_break_time;
-        }
-
-        // 勤務時間の再計算
-        if (isset($updateData['clock_in']) || isset($updateData['clock_out']) || isset($updateData['break_time'])) {
-            $clockIn = isset($updateData['clock_in'])
-                ? Carbon::parse($updateData['clock_in'])
-                : Carbon::parse($timecard->clock_in);
-
-            $clockOut = isset($updateData['clock_out'])
-                ? Carbon::parse($updateData['clock_out'])
-                : Carbon::parse($timecard->clock_out);
-
-            $breakTime = $updateData['break_time'] ?? $timecard->break_time;
-
-            $this->recalculateWorkTime($clockIn, $clockOut, $breakTime, $updateData);
-        }
-
-        return $this->timecardRepository->update($timecard, $updateData);
     }
 
     /**

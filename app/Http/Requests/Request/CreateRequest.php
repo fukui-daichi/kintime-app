@@ -30,13 +30,14 @@ class CreateRequest extends FormRequest
             'reason' => 'required|string|max:500',
         ];
 
-        // 申請種別に応じたバリデーションルールを設定
         if ($this->input('request_type') === RequestConstants::REQUEST_TYPE_TIMECARD) {
             $rules['after_clock_in'] = [
+                'required_without:after_clock_out',
                 'nullable',
                 'date_format:H:i',
             ];
             $rules['after_clock_out'] = [
+                'required_without:after_clock_in',
                 'nullable',
                 'date_format:H:i',
                 Rule::when(
@@ -44,17 +45,9 @@ class CreateRequest extends FormRequest
                     ['after:after_clock_in']
                 ),
             ];
-            // 時刻修正の場合、少なくともどちらかの時刻が必要
-            $rules['any_time'] = ['required', 'in:true'];
-        } else {
-            // 有給休暇申請の場合
-            $rules['vacation_type'] = [
-                'required',
-                Rule::in([
-                    RequestConstants::VACATION_TYPE_FULL,
-                    RequestConstants::VACATION_TYPE_AM,
-                    RequestConstants::VACATION_TYPE_PM
-                ])
+            $rules['after_break_time'] = [
+                'nullable',
+                'date_format:H:i',
             ];
         }
 

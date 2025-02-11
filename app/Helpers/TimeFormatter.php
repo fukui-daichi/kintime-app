@@ -51,8 +51,9 @@ class TimeFormatter
             return null;
         }
 
+        // "HH:mm" 形式の時刻を分に変換
         [$hours, $minutes] = array_pad(explode(':', $time), 2, 0);
-        return ($hours * 60) + $minutes;
+        return (intval($hours) * 60) + intval($minutes);
     }
 
     /**

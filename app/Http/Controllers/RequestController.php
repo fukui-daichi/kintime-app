@@ -73,12 +73,26 @@ class RequestController extends Controller
     public function store(CreateRequest $request): RedirectResponse
     {
         try {
+            // バリデーション済みデータの確認
+            Log::debug('申請フォームからの入力データ', [
+                'validated_data' => $request->validatedData(),
+                'raw_data' => $request->all(),
+                'request_type' => $request->request_type,
+                'timecard_id' => $request->timecard_id,
+                'after_clock_in' => $request->after_clock_in,
+                'after_clock_out' => $request->after_clock_out,
+                'after_break_time' => $request->after_break_time,
+            ]);
+
             $this->requestService->createRequest($request->validatedData());
             return redirect()
                 ->route('requests.index')
                 ->with('success', '申請を送信しました');
         } catch (\Exception $e) {
-            Log::error('申請作成エラー: ' . $e->getMessage());
+            Log::error('申請作成エラー（コントローラー）: ' . $e->getMessage(), [
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()
                 ->with('error', '申請の送信に失敗しました')
                 ->withInput();
