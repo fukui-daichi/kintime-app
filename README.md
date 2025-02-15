@@ -1,66 +1,257 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 要件定義
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 1. システム概要
 
-## About Laravel
+Laravelを使用した勤怠管理Webアプリケーション
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 2. 機能要件
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 2.1 ユーザー管理機能
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### ユーザー区分
 
-## Learning Laravel
+- 管理者ユーザー
+- 一般ユーザー
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### ユーザー情報
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- ユーザーID
+- 姓
+- 名
+- メールアドレス（ログイン時に使用可能）
+- パスワード（ハッシュ化）
+- ユーザー区分（管理者/一般）
+- 入社年月日
+- 作成日時
+- 更新日時
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2.2 認証機能
 
-## Laravel Sponsors
+- ログイン機能
+    - メールアドレスとパスワードによる認証
+    - セッション管理
+- ログアウト機能
+- パスワードリセット機能
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2.3 勤怠記録機能
 
-### Premium Partners
+### 基本機能
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- 出勤打刻
+    - 日時の自動記録
+    - 重複チェック（同日の出勤が既に存在する場合）
+- 退勤打刻
+    - 日時の自動記録
+    - 出勤記録の存在チェック
+- 勤務時間の自動計算
+    - 実労働時間（退勤時間 - 出勤時間）
+    - 休憩時間の考慮
 
-## Contributing
+### 勤怠データ項目
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- 勤怠ID
+- ユーザーID（外部キー）
+- 日付
+- 出勤時間
+- 退勤時間
+- 実労働時間（休憩時間1時間を含む）
+- 残業時間（所定労働時間を超えた時間）
+- 深夜時間（22時から翌5時までの労働時間）
+- 休憩時間（デフォルト1時間）
+- 勤務状態（出勤中/退勤済み）
+- 承認状態
+- 備考
+- 作成日時
+- 更新日時
 
-## Code of Conduct
+### 2.4 休日設定機能
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### システム設定
 
-## Security Vulnerabilities
+- デフォルト休日設定
+    - 土曜日・日曜日を自動的に休日として設定
+    - 国民の祝日を自動的に休日として設定（内閣府の祝日データを利用）
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 管理者機能
 
-## License
+- カレンダー形式での休日設定画面
+- 一括休日設定機能
+    - 期間指定による複数日の一括設定
+    - 休日種別の設定（会社休日/夏季休暇/年末年始休暇など）
+- 休日設定のインポート/エクスポート機能（CSV形式）
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### データ項目
+
+- 休日ID
+- 日付
+- 休日種別
+- 休日名称
+- 備考
+- 作成者ID
+- 作成日時
+- 更新日時
+
+### 2.5 有給休暇管理機能
+
+### 有給休暇付与ルール
+
+- 自動付与条件
+    - 入社後6ヶ月経過
+    - 出勤率80%以上（所定労働日の8割以上出勤）
+- 付与日数（労働基準法に準拠）
+    - 勤続年数に応じた付与日数の自動計算
+    - 初回付与：10日
+    - 以降、勤続年数に応じて最大20日まで段階的に付与
+
+### 有給休暇データ管理
+
+- 有給休暇データ項目
+    - 有給休暇ID
+    - ユーザーID（外部キー）
+    - 付与日
+    - 付与日数
+    - 失効日
+    - 残日数
+    - 取得履歴
+    - ステータス（有効/失効）
+
+- 取得履歴データ項目
+    - 取得履歴ID
+    - 有給休暇ID（外部キー）
+    - 取得日
+    - 取得種別（全日/午前半休/午後半休）
+    - 申請状態
+    - 承認者ID
+    - 承認日時
+
+### 管理機能
+
+- 有給休暇付与管理
+    - 自動付与処理（バッチ処理）
+    - 手動付与機能（管理者用）
+    - 付与履歴の管理
+- 残日数管理
+    - リアルタイムでの残日数計算
+    - 失効予定日のアラート機能
+- 取得状況の可視化
+    - 個人別取得状況レポート
+    - 部署別取得率レポート
+    - 取得推奨アラート（残日数が多い従業員向け）
+
+### 2.6 承認フロー機能
+
+### システム設定
+
+- 承認フロー設定
+    - 管理者用の設定画面でトグル可能
+    - デフォルト：オン（承認必須）
+    - オン：勤怠修正に承認必須
+    - オフ：一般ユーザーによる自由な修正可能
+    - ※休憩時間の変更は、トグル設定に関わらず常に承認必須
+
+### 申請機能
+
+- 勤怠修正申請
+    - 出勤時間の修正
+    - 退勤時間の修正
+    - 休憩時間の修正（常に承認必須）
+    - 修正理由の記入
+    - 期限設定なし（過去データの修正可能）
+    - 申請日時の記録（申請順管理用）
+- 休暇申請
+    - 休暇種別
+        - 有給休暇（全日/午前半休/午後半休）
+        - 欠勤
+        - その他特別休暇
+    - 期間指定
+    - 理由記入
+    - 残有給日数の自動チェック
+    - 取得可能日数の自動表示
+
+### 承認機能
+
+- 管理者による申請確認
+- 承認/否認の選択
+- コメント追加
+- 申請者への通知
+
+### 2.7 閲覧機能
+
+### ダッシュボード機能
+
+### 管理者ダッシュボード
+
+- 承認待ち申請アラート表示
+    - 画面更新時に最新状態を表示
+    - 申請一覧（申請日時順）
+    - 未処理申請件数の表示
+- 全体の勤怠状況サマリー
+- 部署別勤怠状況
+
+### 一般ユーザーダッシュボード
+
+- 申請状況アラート表示
+    - 画面更新時に最新状態を表示
+    - 承認待ち申請の表示
+    - 申請の承認/否認結果の表示
+    - ダッシュボード上での通知のみ
+- 自身の勤怠状況サマリー
+- 当月の勤務実績
+
+### 一般ユーザー閲覧機能
+
+- 自身の勤怠記録の閲覧
+- 月別勤怠サマリーの表示
+- 申請履歴の確認
+
+### 管理者ユーザー
+
+- 全ユーザーの勤怠記録閲覧
+- ユーザー別/部署別の勤怠サマリー
+- 承認待ち申請一覧
+- 統計データの閲覧
+
+### 2.8 集計・レポート機能
+
+- 月次勤怠集計
+- 部署別勤怠集計
+- CSV/PDFエクスポート
+
+## 3. 非機能要件
+
+### 3.1 セキュリティ要件
+
+- ユーザー認証の必須化
+- パスワードの暗号化保存
+- セッション管理
+- クロスサイトスクリプティング対策
+- SQLインジェクション対策
+
+### 3.2 性能要件
+
+- ページロード時間：3秒以内
+- 同時接続ユーザー数：100人程度
+- データベースのレスポンス時間：1秒以内
+
+### 3.3 バックアップ要件
+
+- データベースの定期バックアップ
+- バックアップデータの保持期間：1年間
+
+## 4. 開発環境・技術スタック
+
+- フレームワーク：
+    - Laravel 11.37.0
+- 言語：
+    - PHP 8.4.2
+- データベース：MySQL 8.0
+- フロントエンド：
+    - HTML/CSS
+    - JavaScript (必要最小限)
+    - Bootstrap/Tailwind CSS
+- 開発環境：
+    - Docker/Docker Compose
+    - Composer
+    - Git
+- 開発ツール：
+    - Laravel Sail (Dockerコンテナ管理)
