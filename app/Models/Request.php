@@ -33,6 +33,7 @@ class Request extends Model
     protected $fillable = [
         'user_id',
         'approver_id',
+        'timecard_id',
         'request_type',
         'target_date',
         'status',

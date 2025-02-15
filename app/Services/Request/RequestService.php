@@ -73,39 +73,38 @@ class RequestService
     public function createRequest(array $data): Request
     {
         try {
-            // 休憩時間を時刻形式から分単位に変換
-            if (isset($data['after_break_time'])) {
-                $data['after_break_time'] = TimeFormatter::timeToMinutes($data['after_break_time']);
-            }
-
-            // 時刻データの整形
-            if (isset($data['after_clock_in'])) {
-                $data['after_clock_in'] = TimeFormatter::convertToDateTime(
-                    $data['after_clock_in'],
-                    Carbon::parse($data['target_date'])->format('Y-m-d')
-                );
-            }
-
-            if (isset($data['after_clock_out'])) {
-                $data['after_clock_out'] = TimeFormatter::convertToDateTime(
-                    $data['after_clock_out'],
-                    Carbon::parse($data['target_date'])->format('Y-m-d')
-                );
-            }
-
-            Log::debug('申請データ（変換後）', [
+            Log::debug('申請データの作成開始', [
                 'input_data' => $data,
-                'after_break_time_minutes' => $data['after_break_time'] ?? null,
-                'formatted_clock_in' => $data['after_clock_in'] ?? null,
-                'formatted_clock_out' => $data['after_clock_out'] ?? null
+                'target_date' => $data['target_date'] ?? null,
+                'timecard_id' => $data['timecard_id'] ?? null
             ]);
 
             return DB::transaction(function () use ($data) {
-                $request = $this->requestRepository->create($data);
+                $createData = array_merge($data, [
+                    'timecard_id' => (int)$data['timecard_id']
+                ]);
+
+                Log::debug('実際のINSERTデータ', [
+                    'create_data' => $createData
+                ]);
+
+                $request = $this->requestRepository->create($createData);
+
+                Log::debug('申請作成成功', [
+                    'request_id' => $request->id,
+                    'timecard_id' => $request->timecard_id,
+                    'status' => $request->status
+                ]);
 
                 if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
                     $timecard = $this->timecardRepository->findById($request->timecard_id);
-                    $timecard->update(['status' => 'pending_approval']);
+                    if ($timecard) {
+                        $timecard->update(['status' => 'pending_approval']);
+                        Log::debug('勤怠ステータス更新完了', [
+                            'timecard_id' => $timecard->id,
+                            'new_status' => 'pending_approval'
+                        ]);
+                    }
                 }
 
                 return $request;
@@ -114,6 +113,7 @@ class RequestService
             Log::error('申請作成エラー（サービス）', [
                 'error' => $e->getMessage(),
                 'exception_class' => get_class($e),
+                'data' => $data,
                 'trace' => $e->getTraceAsString()
             ]);
             throw $e;

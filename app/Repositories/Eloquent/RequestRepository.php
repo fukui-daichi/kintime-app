@@ -7,6 +7,7 @@ use App\Constants\RequestConstants;
 use App\Repositories\Interfaces\RequestRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 
 class RequestRepository implements RequestRepositoryInterface
 {
@@ -23,7 +24,27 @@ class RequestRepository implements RequestRepositoryInterface
      */
     public function create(array $data): Request
     {
-        return Request::create($data);
+        try {
+            Log::debug('リポジトリでの申請作成開始', [
+                'data' => $data,
+                'timecard_id' => $data['timecard_id'] ?? null
+            ]);
+
+            $request = Request::create($data);
+
+            Log::debug('リポジトリでの申請作成完了', [
+                'created_request_id' => $request->id,
+                'created_timecard_id' => $request->timecard_id
+            ]);
+
+            return $request;
+        } catch (\Exception $e) {
+            Log::error('リポジトリでの申請作成エラー', [
+                'error' => $e->getMessage(),
+                'data' => $data
+            ]);
+            throw $e;
+        }
     }
 
     /**

@@ -99,24 +99,46 @@ class CreateRequest extends FormRequest
     {
         $validated = $this->validated();
 
-        // any_timeフィールドを削除
-        unset($validated['any_time']);
+        try {
+            // timecardのデータを取得
+            $timecard = \App\Models\Timecard::findOrFail($validated['timecard_id']);
 
-        // 対象の勤怠データを取得
-        $timecard = \App\Models\Timecard::find($validated['timecard_id']);
+            // target_dateを設定
+            $validated['target_date'] = $timecard->date;
 
-        // 勤怠修正の場合
-        if ($validated['request_type'] === RequestConstants::REQUEST_TYPE_TIMECARD) {
-            $validated = $this->prepareTimecardRequestData($validated, $timecard);
+            // 休憩時間を時刻形式から分単位に変換
+            if (isset($validated['after_break_time'])) {
+                $validated['after_break_time'] = \App\Helpers\TimeFormatter::timeToMinutes($validated['after_break_time']);
+            }
+
+            // before_*の情報を追加
+            $validated['before_clock_in'] = $timecard->clock_in;
+            $validated['before_clock_out'] = $timecard->clock_out;
+            $validated['before_break_time'] = $timecard->break_time;
+
+            // ユーザー情報を追加
+            $user = $this->user();  // 現在のユーザーを取得
+            $validated['user_id'] = $user->getKey();  // idプロパティの代わりにgetKey()を使用
+
+            // 管理者を取得して承認者IDを設定
+            $admin = \App\Models\User::where('user_type', 'admin')->first();
+            $validated['approver_id'] = $admin->getKey();
+
+            $validated['status'] = 'pending';
+
+            // nullの値を除外
+            return array_filter($validated, function ($value) {
+                return $value !== null;
+            });
+
+        } catch (\Exception $e) {
+            Log::error('リクエストデータの整形エラー', [
+                'error' => $e->getMessage(),
+                'validated_data' => $validated,
+                'user' => $this->user()
+            ]);
+            throw $e;
         }
-
-        // 申請データに必要な情報を追加
-        return array_merge($validated, [
-            'user_id' => Auth::id(),
-            'approver_id' => $this->getDefaultApproverId(),
-            'status' => RequestConstants::STATUS_PENDING,
-            'target_date' => $timecard->date,
-        ]);
     }
 
     /**
