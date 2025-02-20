@@ -406,21 +406,6 @@ class TimecardService
     }
 
     /**
-     * レスポンスデータを作成
-     *
-     * @param bool $success
-     * @param string $message
-     * @return array
-     */
-    private function createResponse(bool $success, string $message): array
-    {
-        return [
-            'success' => $success,
-            'message' => $message
-        ];
-    }
-
-    /**
      * 出勤打刻が可能か判定
      *
      * @param Timecard|null $timecard
@@ -440,30 +425,5 @@ class TimecardService
     private function canClockOut(?Timecard $timecard): bool
     {
         return $timecard && $timecard->status === 'working';
-    }
-
-    /**
-     * 勤務時間計算のログを記録
-     *
-     * @param Carbon $clockIn
-     * @param Carbon $clockOut
-     * @param int $workMinutes
-     * @param int $breakTime
-     * @param int $actualWorkMinutes
-     */
-    private function logWorkTimeCalculation(
-        Carbon $clockIn,
-        Carbon $clockOut,
-        int $workMinutes,
-        int $breakTime,
-        int $actualWorkMinutes
-    ): void {
-        Log::debug('勤務時間計算詳細', [
-            'clock_in' => $clockIn->format('H:i'),
-            'clock_out' => $clockOut->format('H:i'),
-            'total_minutes' => $workMinutes,
-            'break_time' => $breakTime,
-            'actual_minutes' => $actualWorkMinutes,
-        ]);
     }
 }
