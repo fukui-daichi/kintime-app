@@ -21,7 +21,7 @@ Route::middleware('auth')->group(function () {
 
     // 勤怠関連
     Route::prefix('timecard')->name('timecard.')->group(function () {
-        Route::get('/', [TimecardController::class, 'monthly'])->name('monthly');
+        Route::get('/', [TimecardController::class, 'index'])->name('index');
         Route::post('/clock-in', [TimecardController::class, 'clockIn'])->name('clockIn');
         Route::post('/clock-out', [TimecardController::class, 'clockOut'])->name('clockOut');
     });

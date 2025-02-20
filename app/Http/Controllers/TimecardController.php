@@ -22,11 +22,19 @@ class TimecardController extends Controller
         $this->timecardService = $timecardService;
     }
 
-    // 勤怠画面表示用メソッド
-    public function index()
+    /**
+     * 月別勤怠一覧画面の表示
+     */
+    public function index(Request $request)
     {
-        $timecardData = $this->timecardService->getDailyTimecardData(Auth::id());
-        return view('user.index', $timecardData);
+        // サービスから必要なデータを取得してビューに渡すだけにする
+        return view('user.timecard.index',
+            $this->timecardService->getMonthlyTimecardData(
+                Auth::id(),
+                $request->query('year'),
+                $request->query('month')
+            )
+        );
     }
 
     /**
@@ -84,20 +92,5 @@ class TimecardController extends Controller
             ]);
             return back()->with('error', 'システムエラーが発生しました。');
         }
-    }
-
-    /**
-     * 月別勤怠一覧画面の表示
-     */
-    public function monthly(Request $request)
-    {
-        // サービスから必要なデータを取得してビューに渡すだけにする
-        return view('user.timecard.monthly',
-            $this->timecardService->getMonthlyTimecardData(
-                Auth::id(),
-                $request->query('year'),
-                $request->query('month')
-            )
-        );
     }
 }

@@ -10,13 +10,13 @@
                     {{-- 年月選択部分 --}}
                     <div class="mb-6 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                         {{-- 前月リンク --}}
-                        <a href="{{ route('timecard.monthly', ['year' => $previousMonth->year, 'month' => $previousMonth->month]) }}"
+                        <a href="{{ route('timecard.index', ['year' => $previousMonth->year, 'month' => $previousMonth->month]) }}"
                             class="text-blue-500 hover:text-blue-700">
                             ← {{ $previousMonth->format('Y年n月') }}
                         </a>
 
                         {{-- 年月選択フォーム --}}
-                        <form method="GET" action="{{ route('timecard.monthly') }}" class="flex items-center space-x-2">
+                        <form method="GET" action="{{ route('timecard.index') }}" class="flex items-center space-x-2">
                             <select name="year" class="rounded-md border-gray-300" onchange="this.form.submit()">
                                 @foreach ($years as $year)
                                     <option value="{{ $year['value'] }}"
@@ -40,7 +40,7 @@
                         {{-- 翌月リンク（現在月より未来は非表示） --}}
                         <div class="w-24 text-right">
                             @if ($showNextMonth)
-                                <a href="{{ route('timecard.monthly', ['year' => $nextMonth->year, 'month' => $nextMonth->month]) }}"
+                                <a href="{{ route('timecard.index', ['year' => $nextMonth->year, 'month' => $nextMonth->month]) }}"
                                     class="text-blue-500 hover:text-blue-700">
                                     {{ $nextMonth->format('Y年n月') }} →
                                 </a>

@@ -2,31 +2,45 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Timecard\TimecardService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class HomeController extends Controller
 {
-    private $timecardController;
+    private $timecardService;
 
-    public function __construct(TimecardController $timecardController)
+    /**
+     * コンストラクタ
+     *
+     * @param TimecardService $timecardService
+     */
+    public function __construct(TimecardService $timecardService)
     {
-        $this->timecardController = $timecardController;
+        $this->timecardService = $timecardService;
     }
 
     /**
      * ユーザー種別に応じたホーム画面を表示
+     *
+     * @return View|RedirectResponse
      */
-    public function index()
+    public function index(): View|RedirectResponse
     {
-        // 未ログインの場合はログイン画面へリダイレクト
         if (!Auth::check()) {
             return redirect('login');
         }
 
-        // ユーザー種別に応じて表示を分岐
-        return Auth::user()->user_type === 'admin'
-            ? view('admin.index')
-            : $this->timecardController->index();
+        $user = Auth::user();
+        $timecardData = $this->timecardService->getDailyTimecardData(Auth::id());
+
+        // 管理者の場合
+        if ($user->user_type === 'admin') {
+            return view('admin.index');
+        }
+
+        // 一般ユーザーの場合
+        return view('user.index', $timecardData);
     }
 }
