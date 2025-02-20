@@ -135,4 +135,33 @@ class TimeFormatter
             return null;
         }
     }
+
+    /**
+     * 日時データをHH:mm形式（時:分）の文字列に変換
+     * 例: "2025-02-20 09:30:00" → "09:30"
+     *
+     * @param Carbon|string|null $datetime 日時データ
+     * @return string|null HH:mm形式の文字列、または null
+     *
+     * @example
+     * TimeFormatter::toHourMinute("2025-02-20 09:30:00") // "09:30" を返す
+     * TimeFormatter::toHourMinute("09:30:00") // "09:30" を返す
+     * TimeFormatter::toHourMinute(null) // null を返す
+     */
+    public static function toHourMinute($datetime): ?string
+    {
+        if (empty($datetime)) {
+            return null;
+        }
+
+        try {
+            $carbon = $datetime instanceof Carbon
+                ? $datetime
+                : Carbon::parse($datetime);
+
+            return $carbon->format('H:i');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
 }

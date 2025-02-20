@@ -152,7 +152,7 @@
 
                         {{-- 送信ボタン --}}
                         <div class="flex justify-end space-x-4">
-                            <a href="{{ route('timecard.monthly') }}"
+                            <a href="{{ route('timecard.index') }}"
                             class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                                 キャンセル
                             </a>

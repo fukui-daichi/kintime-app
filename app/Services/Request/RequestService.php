@@ -73,49 +73,23 @@ class RequestService
     public function createRequest(array $data): Request
     {
         try {
-            Log::debug('申請データの作成開始', [
-                'input_data' => $data,
-                'target_date' => $data['target_date'] ?? null,
-                'timecard_id' => $data['timecard_id'] ?? null
-            ]);
-
             return DB::transaction(function () use ($data) {
                 $createData = array_merge($data, [
                     'timecard_id' => (int)$data['timecard_id']
                 ]);
 
-                Log::debug('実際のINSERTデータ', [
-                    'create_data' => $createData
-                ]);
-
                 $request = $this->requestRepository->create($createData);
-
-                Log::debug('申請作成成功', [
-                    'request_id' => $request->id,
-                    'timecard_id' => $request->timecard_id,
-                    'status' => $request->status
-                ]);
 
                 if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
                     $timecard = $this->timecardRepository->findById($request->timecard_id);
                     if ($timecard) {
                         $timecard->update(['status' => 'pending_approval']);
-                        Log::debug('勤怠ステータス更新完了', [
-                            'timecard_id' => $timecard->id,
-                            'new_status' => 'pending_approval'
-                        ]);
                     }
                 }
 
                 return $request;
             });
         } catch (\Exception $e) {
-            Log::error('申請作成エラー（サービス）', [
-                'error' => $e->getMessage(),
-                'exception_class' => get_class($e),
-                'data' => $data,
-                'trace' => $e->getTraceAsString()
-            ]);
             throw $e;
         }
     }
@@ -143,10 +117,6 @@ class RequestService
 
             return true;
         } catch (\Exception $e) {
-            Log::error('申請承認エラー', [
-                'request_id' => $request->id,
-                'error' => $e->getMessage()
-            ]);
             throw $e;
         }
     }
@@ -175,10 +145,6 @@ class RequestService
 
             return true;
         } catch (\Exception $e) {
-            Log::error('申請否認エラー', [
-                'request_id' => $request->id,
-                'error' => $e->getMessage()
-            ]);
             throw $e;
         }
     }
@@ -193,15 +159,17 @@ class RequestService
     {
         $formattedTimecard = $this->formatTimecardDataForDisplay($timecard);
 
+        $formData = [
+            'timecard_id' => $timecard->id,
+            'clock_in' => TimeFormatter::toHourMinute($timecard->clock_in),
+            'clock_out' => TimeFormatter::toHourMinute($timecard->clock_out),
+            'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
+        ];
+
         return [
             'currentTimecard' => $this->formatTimecardData($timecard),
             'formattedTimecard' => $formattedTimecard,
-            'formData' => [
-                'timecard_id' => $timecard->id,
-                'clock_in' => $timecard->clock_in ? substr($timecard->clock_in, 0, 5) : null,
-                'clock_out' => $timecard->clock_out ? substr($timecard->clock_out, 0, 5) : null,
-                'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
-            ],
+            'formData' => $formData,
             'requestTypes' => RequestConstants::REQUEST_TYPES,
             'vacationTypes' => RequestConstants::VACATION_TYPES,
         ];
@@ -323,37 +291,23 @@ class RequestService
                 throw new \Exception('勤怠データが見つかりません');
             }
 
-            Log::debug('勤怠更新データ（前）', [
-                'request_id' => $request->id,
-                'timecard_date' => $timecard->date->format('Y-m-d'),
-                'after_clock_in' => $request->after_clock_in,
-                'after_clock_out' => $request->after_clock_out,
-                'after_break_time' => $request->after_break_time
-            ]);
-
             $updateData = [
                 'status' => 'left'
             ];
 
-            // 時刻の更新
+            // 時刻の更新処理を修正
             if ($request->after_clock_in) {
-                // 日付と時刻を結合して正しいフォーマットに
-                $updateData['clock_in'] = TimeFormatter::convertToDateTime(
-                    $request->after_clock_in,
-                    $timecard->date->format('Y-m-d')
-                );
+                $updateData['clock_in'] = Carbon::parse($timecard->date->format('Y-m-d') . ' ' .
+                    Carbon::parse($request->after_clock_in)->format('H:i:s'));
             }
 
             if ($request->after_clock_out) {
-                $updateData['clock_out'] = TimeFormatter::convertToDateTime(
-                    $request->after_clock_out,
-                    $timecard->date->format('Y-m-d')
-                );
+                $updateData['clock_out'] = Carbon::parse($timecard->date->format('Y-m-d') . ' ' .
+                    Carbon::parse($request->after_clock_out)->format('H:i:s'));
             }
 
             if ($request->after_break_time) {
-                // 休憩時間は分単位の整数として保存
-                $updateData['break_time'] = TimeFormatter::timeToMinutes($request->after_break_time);
+                $updateData['break_time'] = $request->after_break_time;
             }
 
             // 勤務時間の再計算
@@ -371,19 +325,9 @@ class RequestService
                 $this->recalculateWorkTime($clockIn, $clockOut, $breakTime, $updateData);
             }
 
-            Log::debug('勤怠更新データ（後）', [
-                'update_data' => $updateData,
-                'converted_clock_in' => $updateData['clock_in'] ?? null,
-                'converted_clock_out' => $updateData['clock_out'] ?? null
-            ]);
-
             return $this->timecardRepository->update($timecard, $updateData);
+
         } catch (\Exception $e) {
-            Log::error('勤怠データ更新エラー', [
-                'request_id' => $request->id,
-                'timecard_id' => $request->timecard_id,
-                'error' => $e->getMessage()
-            ]);
             throw $e;
         }
     }
@@ -412,12 +356,6 @@ class RequestService
             $updateData['night_work_time'] = $this->calculateNightWorkTime($clockIn, $clockOut);
 
         } catch (\Exception $e) {
-            Log::error('勤務時間計算エラー', [
-                'clock_in' => $clockIn->toDateTimeString(),
-                'clock_out' => $clockOut->toDateTimeString(),
-                'break_time' => $breakTime,
-                'error' => $e->getMessage()
-            ]);
             throw $e;
         }
     }
@@ -461,21 +399,5 @@ class RequestService
     public function canUpdateTimecard(Timecard $timecard): bool
     {
         return !$this->requestRepository->getPendingRequestByTimecardId($timecard->id);
-    }
-
-    /**
-     * エラーレスポンスを作成
-     *
-     * @param string $message
-     * @param array $context
-     * @return array
-     */
-    private function createErrorResponse(string $message, array $context = []): array
-    {
-        Log::error($message, $context);
-        return [
-            'success' => false,
-            'message' => $message
-        ];
     }
 }

@@ -27,7 +27,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // 申請関連のルート
-    Route::prefix('requests')->name('requests.')->middleware('auth')->group(function () {
+    Route::prefix('requests')->name('requests.')->group(function () {
         Route::get('/', [RequestController::class, 'index'])->name('index');
         Route::get('/create/{timecard}', [RequestController::class, 'create'])->name('create');
         Route::post('/', [RequestController::class, 'store'])->name('store');

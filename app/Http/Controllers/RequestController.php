@@ -61,7 +61,8 @@ class RequestController extends Controller
             return back()->with('error', 'この勤怠データは現在修正申請できません');
         }
 
-        return view('user.requests.create', $this->requestService->getFormData($timecard));
+        $formData = $this->requestService->getFormData($timecard);
+        return view('user.requests.create', $formData);
     }
 
     /**
@@ -73,26 +74,11 @@ class RequestController extends Controller
     public function store(CreateRequest $request): RedirectResponse
     {
         try {
-            // バリデーション済みデータの確認
-            Log::debug('申請フォームからの入力データ', [
-                'validated_data' => $request->validatedData(),
-                'raw_data' => $request->all(),
-                'request_type' => $request->request_type,
-                'timecard_id' => $request->timecard_id,
-                'after_clock_in' => $request->after_clock_in,
-                'after_clock_out' => $request->after_clock_out,
-                'after_break_time' => $request->after_break_time,
-            ]);
-
             $this->requestService->createRequest($request->validatedData());
             return redirect()
                 ->route('requests.index')
                 ->with('success', '申請を送信しました');
         } catch (\Exception $e) {
-            Log::error('申請作成エラー（コントローラー）: ' . $e->getMessage(), [
-                'exception_class' => get_class($e),
-                'trace' => $e->getTraceAsString()
-            ]);
             return back()
                 ->with('error', '申請の送信に失敗しました')
                 ->withInput();
@@ -111,7 +97,6 @@ class RequestController extends Controller
             $this->requestService->approveRequest($request);
             return back()->with('success', '申請を承認しました');
         } catch (\Exception $e) {
-            Log::error('承認処理エラー: ' . $e->getMessage());
             return back()->with('error', '申請の承認に失敗しました');
         }
     }
@@ -128,7 +113,6 @@ class RequestController extends Controller
             $this->requestService->rejectRequest($request);
             return back()->with('success', '申請を否認しました');
         } catch (\Exception $e) {
-            Log::error('否認処理エラー: ' . $e->getMessage());
             return back()->with('error', '申請の否認に失敗しました');
         }
     }
