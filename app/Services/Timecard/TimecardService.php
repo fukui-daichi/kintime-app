@@ -10,6 +10,7 @@ use App\Exceptions\Timecard\ClockInNotFoundException;
 use App\Exceptions\Timecard\TimecardCreateException;
 use App\Exceptions\Timecard\TimecardUpdateException;
 use App\Exceptions\Timecard\InvalidWorkTimeException;
+use App\Helpers\TimecardHelper;
 use App\Repositories\Interfaces\TimecardRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -153,7 +154,7 @@ class TimecardService
             $clockOut = Carbon::now();
 
             // 勤務時間の計算
-            $workTimes = $this->calculateWorkTimes($clockIn, $clockOut, $timecard->break_time);
+            $workTimes = TimecardHelper::calculateWorkTimes($clockIn, $clockOut, $timecard->break_time);
 
             $updateData = array_merge(
                 $workTimes,
@@ -174,87 +175,6 @@ class TimecardService
             ];
             throw new TimecardUpdateException($context, $e);
         }
-    }
-
-    /************************************
-     * 勤務時間計算関連
-     ************************************/
-
-    /**
-     * 勤務時間を計算
-     *
-     * @param Carbon $clockIn
-     * @param Carbon $clockOut
-     * @param int $breakTime
-     * @return array
-     */
-    private function calculateWorkTimes(Carbon $clockIn, Carbon $clockOut, int $breakTime): array
-    {
-        try {
-            // 退勤時刻が出勤時刻より前の場合
-            if ($clockOut->lt($clockIn)) {
-                throw new InvalidWorkTimeException([
-                    'clock_in' => $clockIn->toTimeString(),
-                    'clock_out' => $clockOut->toTimeString()
-                ]);
-            }
-
-            $workMinutes = $clockIn->diffInMinutes($clockOut);
-            $actualWorkMinutes = $workMinutes - $breakTime;
-            $overtimeMinutes = max(0, $actualWorkMinutes - WorkTimeConstants::REGULAR_WORK_MINUTES);
-
-            return [
-                'actual_work_time' => $actualWorkMinutes,
-                'overtime' => $overtimeMinutes,
-                'night_work_time' => $this->calculateNightWorkMinutes($clockIn, $clockOut),
-            ];
-        } catch (\Exception $e) {
-            $context = [
-                'clock_in' => $clockIn->toTimeString(),
-                'clock_out' => $clockOut->toTimeString(),
-                'break_time' => $breakTime
-            ];
-            throw new InvalidWorkTimeException($context, $e);
-        }
-    }
-
-    /**
-     * 深夜時間を計算（22時〜5時の間の勤務時間）
-     *
-     * @param Carbon $clockIn
-     * @param Carbon $clockOut
-     * @return int 深夜時間（分）
-     */
-    private function calculateNightWorkMinutes(Carbon $clockIn, Carbon $clockOut): int
-    {
-        $nightWorkMinutes = 0;
-        $currentTime = $clockIn->copy();
-        $endTime = $clockOut->copy();
-
-        if ($clockOut->lt($clockIn)) {
-            $endTime->addDay();
-        }
-
-        while ($currentTime->lt($endTime)) {
-            if ($this->isNightWorkHour((int)$currentTime->format('H'))) {
-                $nightWorkMinutes++;
-            }
-            $currentTime->addMinute();
-        }
-
-        return $nightWorkMinutes;
-    }
-
-    /**
-     * 指定時刻が深夜時間帯かどうかを判定
-     *
-     * @param int $hour
-     * @return bool
-     */
-    private function isNightWorkHour(int $hour): bool
-    {
-        return $hour >= WorkTimeConstants::NIGHT_WORK_START_HOUR ||
-               $hour < WorkTimeConstants::NIGHT_WORK_END_HOUR;
     }
 
     /************************************
