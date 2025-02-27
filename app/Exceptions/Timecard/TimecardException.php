@@ -102,20 +102,6 @@ class TimecardUpdateException extends TimecardException
 }
 
 /**
- * 無効な勤務時間の例外
- */
-class InvalidWorkTimeException extends TimecardException
-{
-    public function __construct(array $context = [])
-    {
-        parent::__construct(
-            '無効な勤務時間が指定されています。',
-            $context
-        );
-    }
-}
-
-/**
  * 勤怠データが見つからない場合の例外
  */
 class TimecardNotFoundException extends TimecardException
