@@ -29,7 +29,15 @@ Route::middleware('auth')->group(function () {
     // 申請関連のルート
     Route::prefix('requests')->name('requests.')->group(function () {
         Route::get('/', [RequestController::class, 'index'])->name('index');
-        Route::get('/create/{timecard}', [RequestController::class, 'create'])->name('create');
+
+        // 勤怠修正申請用ルート
+        Route::get('/timecard/{timecard}', [RequestController::class, 'createTimecardModification'])
+            ->name('timecard.create');
+
+        // 有給休暇申請用ルート
+        Route::get('/paid-vacation', [RequestController::class, 'createPaidVacation'])
+            ->name('paid_vacation.create');
+
         Route::post('/', [RequestController::class, 'store'])->name('store');
 
         // 管理者専用ルート

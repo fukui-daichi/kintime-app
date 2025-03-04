@@ -66,6 +66,41 @@ class RequestController extends Controller
     }
 
     /**
+     * 勤怠修正申請フォームを表示
+     *
+     * @param Timecard $timecard 勤怠データ
+     * @return View|RedirectResponse
+     */
+    public function createTimecardModification(Timecard $timecard): View|RedirectResponse
+    {
+        if (!$this->requestService->canUpdateTimecard($timecard)) {
+            return back()->with('error', 'この勤怠データは現在修正申請できません');
+        }
+
+        $formData = $this->requestService->getTimecardModificationFormData($timecard);
+        return view('user.requests.timecard-modification', $formData);
+    }
+
+    /**
+     * 有給休暇申請フォームを表示
+     *
+     * @param HttpRequest $request リクエストデータ
+     * @return View|RedirectResponse
+     */
+    public function createPaidVacation(HttpRequest $request): View|RedirectResponse
+    {
+        $targetDate = $request->input('date');
+
+        // 過去日付の場合はエラー（過去日付は勤怠データ修正のみ）
+        if ($this->requestService->isPastDate($targetDate)) {
+            return back()->with('error', '過去日付には有給休暇申請はできません');
+        }
+
+        $formData = $this->requestService->getVacationRequestFormData($targetDate);
+        return view('user.requests.paid-vacation-request', $formData);
+    }
+
+    /**
      * 申請を保存
      *
      * @param CreateRequest $request

@@ -3,14 +3,26 @@
 namespace App\Http\Requests\Request;
 
 use App\Constants\RequestConstants;
-use App\Helpers\TimeFormatter;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class CreateRequest extends FormRequest
 {
+    /**
+     * バリデーション前の処理
+     */
+    protected function prepareForValidation()
+    {
+        // リクエストタイプの判定と追加フラグの設定
+        $requestType = $this->input('request_type');
+        $this->merge([
+            'is_timecard_request' => $requestType === RequestConstants::REQUEST_TYPE_TIMECARD,
+            'is_paid_vacation_request' => $requestType === RequestConstants::REQUEST_TYPE_PAID_VACATION
+        ]);
+    }
+
     /**
      * バリデーションルールを取得
      *
@@ -19,7 +31,6 @@ class CreateRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'timecard_id' => 'required|exists:timecards,id',
             'request_type' => [
                 'required',
                 Rule::in([
@@ -28,9 +39,12 @@ class CreateRequest extends FormRequest
                 ])
             ],
             'reason' => 'required|string|max:500',
+            'target_date' => 'required|date',
         ];
 
-        if ($this->input('request_type') === RequestConstants::REQUEST_TYPE_TIMECARD) {
+        // 勤怠修正申請の場合
+        if ($this->input('is_timecard_request')) {
+            $rules['timecard_id'] = 'required|exists:timecards,id';
             $rules['after_clock_in'] = [
                 'required_without:after_clock_out',
                 'nullable',
@@ -51,19 +65,31 @@ class CreateRequest extends FormRequest
             ];
         }
 
-        return $rules;
-    }
+        // 有給休暇申請の場合
+        if ($this->input('is_paid_vacation_request')) {
+            $rules['vacation_type'] = [
+                'required',
+                Rule::in([
+                    RequestConstants::VACATION_TYPE_FULL,
+                    RequestConstants::VACATION_TYPE_AM,
+                    RequestConstants::VACATION_TYPE_PM
+                ])
+            ];
 
-    /**
-     * バリデーション前の準備処理
-     */
-    protected function prepareForValidation()
-    {
-        if ($this->input('request_type') === RequestConstants::REQUEST_TYPE_TIMECARD) {
-            $this->merge([
-                'any_time' => (!empty($this->after_clock_in) || !empty($this->after_clock_out)) ? 'true' : 'false'
-            ]);
+            // 未来日付のチェック
+            $rules['target_date'] = [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) {
+                    $targetDate = Carbon::parse($value);
+                    if ($targetDate->lt(Carbon::today())) {
+                        $fail('有給休暇申請は本日以降の日付のみ可能です。');
+                    }
+                }
+            ];
         }
+
+        return $rules;
     }
 
     /**
@@ -83,8 +109,8 @@ class CreateRequest extends FormRequest
             'after_clock_out.after' => '退勤時刻は出勤時刻より後である必要があります',
             'vacation_type.required' => '休暇種別を選択してください',
             'vacation_type.in' => '無効な休暇種別です',
-            'any_time.required' => '出勤時刻または退勤時刻のいずれかを入力してください',
-            'any_time.in' => '出勤時刻または退勤時刻のいずれかを入力してください',
+            'target_date.required' => '対象日が指定されていません',
+            'target_date.date' => '対象日は有効な日付形式で指定してください',
             'reason.required' => '申請理由を入力してください',
             'reason.max' => '申請理由は500文字以内で入力してください',
         ];
@@ -100,37 +126,21 @@ class CreateRequest extends FormRequest
         $validated = $this->validated();
 
         try {
-            // timecardのデータを取得
-            $timecard = \App\Models\Timecard::findOrFail($validated['timecard_id']);
-
-            // target_dateを設定
-            $validated['target_date'] = $timecard->date;
-
-            // 休憩時間を時刻形式から分単位に変換
-            if (isset($validated['after_break_time'])) {
-                $validated['after_break_time'] = \App\Helpers\TimeFormatter::timeToMinutes($validated['after_break_time']);
-            }
-
-            // before_*の情報を追加
-            $validated['before_clock_in'] = $timecard->clock_in;
-            $validated['before_clock_out'] = $timecard->clock_out;
-            $validated['before_break_time'] = $timecard->break_time;
-
-            // ユーザー情報を追加
-            $user = $this->user();  // 現在のユーザーを取得
-            $validated['user_id'] = $user->getKey();  // idプロパティの代わりにgetKey()を使用
+            // 共通データの設定
+            $user = $this->user();
+            $validated['user_id'] = $user->getKey();
 
             // 管理者を取得して承認者IDを設定
             $admin = \App\Models\User::where('user_type', 'admin')->first();
             $validated['approver_id'] = $admin->getKey();
-
             $validated['status'] = 'pending';
 
-            // nullの値を除外
-            return array_filter($validated, function ($value) {
-                return $value !== null;
-            });
-
+            // 申請種別に応じた処理
+            if ($validated['request_type'] === RequestConstants::REQUEST_TYPE_TIMECARD) {
+                return $this->prepareTimecardRequestData($validated);
+            } else {
+                return $this->preparePaidVacationRequestData($validated);
+            }
         } catch (\Exception $e) {
             Log::error('リクエストデータの整形エラー', [
                 'error' => $e->getMessage(),
@@ -144,34 +154,48 @@ class CreateRequest extends FormRequest
     /**
      * 勤怠修正申請データの準備
      *
-     * @param array $validated
-     * @param \App\Models\Timecard $timecard
-     * @return array
+     * @param array $validated バリデーション済みデータ
+     * @return array 整形済みデータ
      */
-    private function prepareTimecardRequestData(array $validated, \App\Models\Timecard $timecard): array
+    private function prepareTimecardRequestData(array $validated): array
     {
-        // 入力がない場合は元の値を使用
+        // timecardのデータを取得
+        $timecard = \App\Models\Timecard::findOrFail($validated['timecard_id']);
+
+        // before_*の情報を追加
         $validated['before_clock_in'] = $timecard->clock_in;
         $validated['before_clock_out'] = $timecard->clock_out;
         $validated['before_break_time'] = $timecard->break_time;
 
-        $validated['after_clock_in'] = $validated['after_clock_in']
-            ?? substr($timecard->clock_in, 0, 5);
-        $validated['after_clock_out'] = $validated['after_clock_out']
-            ?? substr($timecard->clock_out, 0, 5);
+        // 休憩時間を時刻形式から分単位に変換
+        if (isset($validated['after_break_time'])) {
+            $validated['after_break_time'] = \App\Helpers\TimeFormatter::timeToMinutes($validated['after_break_time']);
+        }
 
-        return $validated;
+        // 不要なフィールドを削除
+        unset($validated['is_timecard_request']);
+        unset($validated['is_paid_vacation_request']);
+
+        return array_filter($validated, function ($value) {
+            return $value !== null;
+        });
     }
 
     /**
-     * デフォルトの承認者ID（管理者）を取得
+     * 有給休暇申請データの準備
      *
-     * @return int
+     * @param array $validated バリデーション済みデータ
+     * @return array 整形済みデータ
      */
-    private function getDefaultApproverId(): int
+    private function preparePaidVacationRequestData(array $validated): array
     {
-        return \App\Models\User::where('user_type', 'admin')
-            ->first()
-            ->id;
+        // 不要なフィールドを削除
+        unset($validated['is_timecard_request']);
+        unset($validated['is_paid_vacation_request']);
+        unset($validated['timecard_id']); // 念のため
+
+        return array_filter($validated, function ($value) {
+            return $value !== null;
+        });
     }
 }

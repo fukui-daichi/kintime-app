@@ -64,7 +64,7 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">実働時間</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">残業時間</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">深夜時間</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申請</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200" id="timecard-table-body">
@@ -93,12 +93,18 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 @if ($data['timecard'] && !$data['timecard']->hasPendingRequest())
-                                                    <a href="{{ route('requests.create', ['timecard' => $data['timecard']->id]) }}"
+                                                    <a href="{{ route('requests.timecard.create', ['timecard' => $data['timecard']->id]) }}"
                                                        class="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600">
                                                         修正申請
                                                     </a>
                                                 @elseif ($data['timecard']?->hasPendingRequest())
                                                     <span class="text-yellow-600">申請中</span>
+                                                @elseif (isset($data['date']) && $data['date']->greaterThanOrEqualTo(now()->startOfDay()))
+                                                    {{-- 未来日付の場合は有給申請リンクを表示 --}}
+                                                    <a href="{{ route('requests.paid_vacation.create', ['date' => $data['date']->format('Y-m-d')]) }}"
+                                                       class="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-md hover:bg-green-600">
+                                                        有給申請
+                                                    </a>
                                                 @endif
                                             </td>
                                         </tr>

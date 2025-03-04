@@ -400,4 +400,87 @@ class RequestService
     {
         return !$this->requestRepository->getPendingRequestByTimecardId($timecard->id);
     }
+
+    /**
+     * 指定された日付が過去日付かどうかを判定する
+     *
+     * @param Carbon|string $date 対象日付
+     * @return bool 過去日付の場合はtrue
+     */
+    public function isPastDate($date): bool
+    {
+        $targetDate = $date instanceof Carbon ? $date : Carbon::parse($date);
+        return $targetDate->lt(Carbon::today());
+    }
+
+    /**
+     * 指定された日付が未来日付かどうかを判定する
+     *
+     * @param Carbon|string $date 対象日付
+     * @return bool 未来日付の場合はtrue
+     */
+    public function isFutureDate($date): bool
+    {
+        $targetDate = $date instanceof Carbon ? $date : Carbon::parse($date);
+        return $targetDate->gte(Carbon::today());
+    }
+
+    /**
+     * 勤怠修正申請フォーム用のデータを取得
+     *
+     * @param Timecard $timecard タイムカードデータ
+     * @return array フォーム表示用データ
+     */
+    public function getTimecardModificationFormData(Timecard $timecard): array
+    {
+        $formattedTimecard = $this->formatTimecardDataForDisplay($timecard);
+
+        $formData = [
+            'timecard_id' => $timecard->id,
+            'target_date' => $timecard->date->format('Y-m-d'),
+            'clock_in' => TimeFormatter::toHourMinute($timecard->clock_in),
+            'clock_out' => TimeFormatter::toHourMinute($timecard->clock_out),
+            'break_time' => TimeFormatter::minutesToTime($timecard->break_time),
+        ];
+
+        return [
+            'currentTimecard' => $this->formatTimecardData($timecard),
+            'formattedTimecard' => $formattedTimecard,
+            'formData' => $formData,
+            'requestTypes' => RequestConstants::REQUEST_TYPES,
+            'vacationTypes' => RequestConstants::VACATION_TYPES,
+            'defaultRequestType' => RequestConstants::REQUEST_TYPE_TIMECARD,
+            'isPastDate' => true,
+            'isFutureDate' => false,
+            'targetDate' => $timecard->date->format('Y-m-d'),
+            'displayDate' => $timecard->date->format('Y年m月d日'),
+        ];
+    }
+
+    /**
+     * 有給休暇申請フォーム用のデータを取得
+     *
+     * @param string|null $targetDate 対象日付（指定がない場合は本日）
+     * @return array フォーム表示用データ
+     */
+    public function getVacationRequestFormData(?string $targetDate = null): array
+    {
+        $date = $targetDate ? Carbon::parse($targetDate) : Carbon::today();
+
+        return [
+            'currentTimecard' => null,
+            'formattedTimecard' => null,
+            'formData' => [
+                'timecard_id' => null,
+                'target_date' => $date->format('Y-m-d'),
+            ],
+            'requestTypes' => RequestConstants::REQUEST_TYPES,
+            'vacationTypes' => RequestConstants::VACATION_TYPES,
+            'defaultRequestType' => RequestConstants::REQUEST_TYPE_PAID_VACATION,
+            'isPastDate' => false,
+            'isFutureDate' => true,
+            'targetDate' => $date->format('Y-m-d'),
+            'displayDate' => $date->format('Y年m月d日'),
+        ];
+    }
 }
