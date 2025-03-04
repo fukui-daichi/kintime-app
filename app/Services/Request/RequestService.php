@@ -73,34 +73,15 @@ class RequestService
     public function createRequest(array $data): Request
     {
         try {
-            Log::debug('申請データの保存開始', [
-                'data' => $data,
-                'request_type' => $data['request_type'] ?? 'undefined'
-            ]);
-
             return DB::transaction(function () use ($data) {
-                // 有給休暇申請の場合は timecard_id が不要
-                if (($data['request_type'] ?? '') === RequestConstants::REQUEST_TYPE_PAID_VACATION) {
-                    Log::debug('有給休暇申請の処理');
-
-                    // クリーンなデータを準備（timecard_id は不要）
-                    $requestData = array_filter($data, function ($key) {
-                        return $key !== 'timecard_id';
-                    }, ARRAY_FILTER_USE_KEY);
-
-                    $request = $this->requestRepository->create($requestData);
-                    return $request;
-                }
-
-                // 勤怠修正申請の場合
-                Log::debug('勤怠修正申請の処理', [
-                    'timecard_id' => $data['timecard_id'] ?? null
+                $createData = array_merge($data, [
+                    'timecard_id' => (int)$data['timecard_id']
                 ]);
 
-                $request = $this->requestRepository->create($data);
+                $request = $this->requestRepository->create($createData);
 
-                if (isset($data['timecard_id'])) {
-                    $timecard = $this->timecardRepository->findById($data['timecard_id']);
+                if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
+                    $timecard = $this->timecardRepository->findById($request->timecard_id);
                     if ($timecard) {
                         $timecard->update(['status' => 'pending_approval']);
                     }
@@ -109,11 +90,6 @@ class RequestService
                 return $request;
             });
         } catch (\Exception $e) {
-            Log::error('申請データの保存エラー', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $data
-            ]);
             throw $e;
         }
     }
