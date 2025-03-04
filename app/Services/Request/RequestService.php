@@ -426,6 +426,18 @@ class RequestService
     }
 
     /**
+     * 指定された日付が土日（週末）かどうかをチェックする
+     *
+     * @param Carbon|string $date 対象日付
+     * @return bool 土日の場合はtrue
+     */
+    public function isWeekend($date): bool
+    {
+        $targetDate = $date instanceof Carbon ? $date : Carbon::parse($date);
+        return $targetDate->isWeekend();
+    }
+
+    /**
      * 勤怠修正申請フォーム用のデータを取得
      *
      * @param Timecard $timecard タイムカードデータ
