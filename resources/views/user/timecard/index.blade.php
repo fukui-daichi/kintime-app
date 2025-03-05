@@ -79,11 +79,11 @@
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($timecards as $day)
-                                    <tr class="{{ $day['is_weekend'] ? 'bg-red-50' : '' }}">
+                                    <tr class="{{ $day['is_sunday'] ? 'bg-red-50' : ($day['is_saturday'] ? 'bg-blue-50' : '') }}">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {{ $day['date']->format('m/d') }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm {{ $day['is_weekend'] ? 'text-red-500' : 'text-gray-500' }}">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm {{ $day['is_sunday'] ? 'text-red-500' : ($day['is_saturday'] ? 'text-blue-500' : 'text-gray-500') }}">
                                             {{ ['日', '月', '火', '水', '木', '金', '土'][$day['date']->dayOfWeek] }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

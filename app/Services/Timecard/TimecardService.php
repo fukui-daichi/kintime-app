@@ -287,9 +287,14 @@ class TimecardService
             $requestType = 'vacation';
         }
 
+        $isSunday = $date->dayOfWeek === Carbon::SUNDAY;
+        $isSaturday = $date->dayOfWeek === Carbon::SATURDAY;
+
         return [
             'date' => $date,
             'timecard' => $timecard,
+            'is_sunday' => $isSunday,
+            'is_saturday' => $isSaturday,
             'is_weekend' => $isWeekend,
             'clock_in' => $timecard ? TimeFormatter::formatTime($timecard->clock_in) : null,
             'clock_out' => $timecard ? TimeFormatter::formatTime($timecard->clock_out) : null,
