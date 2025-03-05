@@ -12,6 +12,7 @@ use App\Exceptions\Timecard\TimecardUpdateException;
 use App\Exceptions\Timecard\InvalidWorkTimeException;
 use App\Helpers\TimecardHelper;
 use App\Repositories\Interfaces\TimecardRepositoryInterface;
+use App\Repositories\Interfaces\RequestRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -22,10 +23,14 @@ use Illuminate\Support\Facades\Log;
 class TimecardService
 {
     private $timecardRepository;
+    private $requestRepository;
 
-    public function __construct(TimecardRepositoryInterface $timecardRepository)
-    {
+    public function __construct(
+        TimecardRepositoryInterface $timecardRepository,
+        RequestRepositoryInterface $requestRepository
+    ) {
         $this->timecardRepository = $timecardRepository;
+        $this->requestRepository = $requestRepository;
     }
 
     /************************************
@@ -198,29 +203,104 @@ class TimecardService
         $currentDate = $startDate->copy();
 
         // タイムカードデータを日付でキー化
-        $timecardsByDate = $timecards->keyBy(function ($timecard) {
+        $timecardsByDate = $timecards->groupBy(function ($timecard) {
             return $timecard->date->format('Y-m-d');
         });
 
         while ($currentDate <= $endDate) {
             $dateKey = $currentDate->format('Y-m-d');
-            $timecard = $timecardsByDate->get($dateKey);
+            $dayTimecards = $timecardsByDate->get($dateKey, collect());
 
-            $result->push([
-                'date' => $currentDate->copy(),
-                'timecard' => $timecard,
-                'is_weekend' => $currentDate->isWeekend(),
-                'clock_in' => $timecard ? TimeFormatter::formatTime($timecard->clock_in) : null,
-                'clock_out' => $timecard ? TimeFormatter::formatTime($timecard->clock_out) : null,
-                'work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->actual_work_time) : null,
-                'overtime' => $timecard ? TimeFormatter::minutesToTime($timecard->overtime) : null,
-                'night_work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->night_work_time) : null,
-            ]);
+            // その日の勤怠データがない場合は空のデータを生成
+            if ($dayTimecards->isEmpty()) {
+                $result->push($this->createDailyTimecardData(
+                    null,
+                    $currentDate->lt(Carbon::today()),
+                    $currentDate->isWeekend(),
+                    $currentDate->copy()
+                ));
+            } else {
+                // 最初（もしくは最も状態が優先度の高い）勤怠データのみを使用
+                $timecard = $dayTimecards->first();
+                $result->push($this->createDailyTimecardData(
+                    $timecard,
+                    $currentDate->lt(Carbon::today()),
+                    $currentDate->isWeekend(),
+                    $currentDate->copy()
+                ));
+            }
 
             $currentDate->addDay();
         }
 
         return $result;
+    }
+
+    /**
+     * 日別データを準備する
+     *
+     * @param Timecard|null $timecard タイムカードデータ
+     * @param bool $isPastDate 過去日付かどうか
+     * @param bool $isWeekend 週末かどうか
+     * @param Carbon $date 日付
+     * @return array 日別データ
+     */
+    private function createDailyTimecardData(?Timecard $timecard, bool $isPastDate, bool $isWeekend, Carbon $date): array
+    {
+        $statusBadge = null;
+        $canRequest = false;
+        $requestType = null;
+        $breakTime = null;
+
+        if ($timecard) {
+            if ($timecard->isPaidVacation()) {
+                // 有給休暇の場合
+                $statusBadge = [
+                    'text' => '有給休暇',
+                    'class' => 'bg-green-100 text-green-800'
+                ];
+            } elseif ($timecard->isPendingRequest()) {
+                // 申請中（共通）
+                $statusBadge = [
+                    'text' => '申請中',
+                    'class' => 'bg-yellow-100 text-yellow-800'
+                ];
+            } elseif ($timecard->isWorking()) {
+                // 勤務中
+                $statusBadge = [
+                    'text' => '勤務中',
+                    'class' => 'bg-blue-100 text-blue-800'
+                ];
+            }
+
+            // 破裳時間の表示準備
+            $breakTime = TimeFormatter::minutesToTime($timecard->break_time);
+
+            // 申請可能か判定
+            $hasPendingRequest = $timecard->hasPendingRequest();
+            $canRequest = $isPastDate && !$hasPendingRequest && $timecard->hasLeft();
+            $requestType = 'timecard';
+        } else {
+            // タイムカードがない場合
+            // 過去の日付で平日なら有給申請可能
+            $canRequest = !$isWeekend;
+            $requestType = 'vacation';
+        }
+
+        return [
+            'date' => $date,
+            'timecard' => $timecard,
+            'is_weekend' => $isWeekend,
+            'clock_in' => $timecard ? TimeFormatter::formatTime($timecard->clock_in) : null,
+            'clock_out' => $timecard ? TimeFormatter::formatTime($timecard->clock_out) : null,
+            'break_time' => $breakTime,
+            'work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->actual_work_time) : null,
+            'overtime' => $timecard ? TimeFormatter::minutesToTime($timecard->overtime) : null,
+            'night_work_time' => $timecard ? TimeFormatter::minutesToTime($timecard->night_work_time) : null,
+            'status_badge' => $statusBadge,
+            'can_request' => $canRequest,
+            'request_type' => $requestType
+        ];
     }
 
     /**
@@ -333,7 +413,7 @@ class TimecardService
      */
     private function canClockIn(?Timecard $timecard): bool
     {
-        return !$timecard;
+        return !$timecard || ($timecard && !$timecard->isWorking() && !$timecard->isPaidVacation());
     }
 
     /**
@@ -344,6 +424,6 @@ class TimecardService
      */
     private function canClockOut(?Timecard $timecard): bool
     {
-        return $timecard && $timecard->status === 'working';
+        return $timecard && $timecard->isWorking();
     }
 }
