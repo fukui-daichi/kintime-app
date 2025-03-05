@@ -77,4 +77,14 @@ class TimecardRepository implements TimecardRepositoryInterface
             ->where('date', Carbon::now()->toDateString())
             ->exists();
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function getTimecardByDate(int $userId, Carbon $date): ?Timecard
+    {
+        return Timecard::where('user_id', $userId)
+            ->where('date', $date->toDateString())
+            ->first();
+    }
 }

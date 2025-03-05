@@ -66,4 +66,13 @@ interface TimecardRepositoryInterface
      * @return bool
      */
     public function hasTodayTimecard(int $userId): bool;
+
+    /**
+     * 指定ユーザーの指定日のタイムカードを取得
+     *
+     * @param int $userId ユーザーID
+     * @param Carbon $date 日付
+     * @return Timecard|null
+     */
+    public function getTimecardByDate(int $userId, Carbon $date): ?Timecard;
 }

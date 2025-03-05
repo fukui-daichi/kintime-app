@@ -91,9 +91,14 @@ class RequestController extends Controller
     {
         $targetDate = $request->input('date');
 
-        // 過去日付の場合はエラー（過去日付は勤怠データ修正のみ）
+        // 過去日付のチェック
         if ($this->requestService->isPastDate($targetDate)) {
             return back()->with('error', '過去日付には有給休暇申請はできません');
+        }
+
+        // 土日のチェックを追加
+        if ($this->requestService->isWeekend($targetDate)) {
+            return back()->with('error', '土日は有給休暇申請の対象外です');
         }
 
         $formData = $this->requestService->getVacationRequestFormData($targetDate);
@@ -114,6 +119,10 @@ class RequestController extends Controller
                 ->route('requests.index')
                 ->with('success', '申請を送信しました');
         } catch (\Exception $e) {
+            Log::error('申請作成エラー', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()
                 ->with('error', '申請の送信に失敗しました')
                 ->withInput();
@@ -130,8 +139,17 @@ class RequestController extends Controller
     {
         try {
             $this->requestService->approveRequest($request);
-            return back()->with('success', '申請を承認しました');
+            $message = $request->request_type === RequestConstants::REQUEST_TYPE_PAID_VACATION
+                ? '有給休暇申請を承認しました'
+                : '申請を承認しました';
+
+            return back()->with('success', $message);
         } catch (\Exception $e) {
+            Log::error('申請承認エラー', [
+                'request_id' => $request->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', '申請の承認に失敗しました');
         }
     }
@@ -146,8 +164,17 @@ class RequestController extends Controller
     {
         try {
             $this->requestService->rejectRequest($request);
-            return back()->with('success', '申請を否認しました');
+            $message = $request->request_type === RequestConstants::REQUEST_TYPE_PAID_VACATION
+                ? '有給休暇申請を否認しました'
+                : '申請を否認しました';
+
+            return back()->with('success', $message);
         } catch (\Exception $e) {
+            Log::error('申請否認エラー', [
+                'request_id' => $request->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', '申請の否認に失敗しました');
         }
     }

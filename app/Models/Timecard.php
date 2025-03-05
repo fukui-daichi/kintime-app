@@ -18,6 +18,14 @@ class Timecard extends Model
     public const STATUS_LEFT = 'left';                 // 退勤済み
     public const STATUS_PENDING_APPROVAL = 'pending_approval'; // 承認待ち
     public const STATUS_APPROVED = 'approved';         // 承認済み
+    public const STATUS_PAID_VACATION = 'paid_vacation'; // 有給休暇 (追加)
+
+    /**
+     * 有給休暇種別の定数定義
+     */
+    public const VACATION_TYPE_FULL = 'full';  // 全日休暇
+    public const VACATION_TYPE_AM = 'am';      // 午前半休
+    public const VACATION_TYPE_PM = 'pm';      // 午後半休
 
     /**
      * The attributes that are mass assignable.
@@ -34,6 +42,7 @@ class Timecard extends Model
         'actual_work_time',
         'overtime',
         'night_work_time',
+        'vacation_type', // 追加
         'status',
         'note'
     ];
@@ -135,5 +144,55 @@ class Timecard extends Model
     public function isApproved(): bool
     {
         return $this->status === self::STATUS_APPROVED;
+    }
+
+    /**
+     * 有給休暇かどうかを判定
+     *
+     * @return bool
+     */
+    public function isPaidVacation(): bool
+    {
+        return $this->status === self::STATUS_PAID_VACATION;
+    }
+
+    /**
+     * 有給休暇の種別を取得（全日、午前半休、午後半休）
+     *
+     * @return string|null 有給休暇の種別、有給休暇でない場合はnull
+     */
+    public function getVacationType(): ?string
+    {
+        return $this->isPaidVacation() ? $this->vacation_type : null;
+    }
+
+    /**
+     * 有給休暇の種別が全日かどうかを判定
+     *
+     * @return bool
+     */
+    public function isFullDayVacation(): bool
+    {
+        return $this->isPaidVacation() && $this->vacation_type === self::VACATION_TYPE_FULL;
+    }
+
+    /**
+     * 有給休暇の種別が午前半休かどうかを判定
+     *
+     * @return bool
+     */
+    public function isAMVacation(): bool
+    {
+        return $this->isPaidVacation() && $this->vacation_type === self::VACATION_TYPE_AM;
+    }
+
+    /**
+     * 有給休暇の種別が午後半休かどうかを判定
+     *
+     * @return bool
+     */
+    public function isPMVacation(): bool
+    {
+        return $this->isPaidVacation() && $this->vacation_type === self::VACATION_TYPE_PM;
     }
 }

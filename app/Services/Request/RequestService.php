@@ -111,12 +111,21 @@ class RequestService
                 ]);
 
                 if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
+                    // 勤怠修正申請の場合
                     $this->updateTimecard($request);
+                } elseif ($request->request_type === RequestConstants::REQUEST_TYPE_PAID_VACATION) {
+                    // 有給休暇申請の場合
+                    $this->registerVacationTimecard($request);
                 }
             });
 
             return true;
         } catch (\Exception $e) {
+            Log::error('申請承認処理エラー', [
+                'request_id' => $request->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             throw $e;
         }
     }
@@ -494,5 +503,75 @@ class RequestService
             'targetDate' => $date->format('Y-m-d'),
             'displayDate' => $date->format('Y年m月d日'),
         ];
+    }
+
+        /**
+     * 有給休暇申請に基づいてタイムカードを作成または更新
+     *
+     * @param Request $request
+     * @return bool
+     */
+    private function registerVacationTimecard(Request $request): bool
+    {
+        try {
+            // 対象日のタイムカードを検索
+            $timecard = $this->timecardRepository->getTimecardByDate(
+                $request->user_id,
+                Carbon::parse($request->target_date)
+            );
+
+            $timecardData = [
+                'user_id' => $request->user_id,
+                'date' => $request->target_date,
+                'status' => Timecard::STATUS_PAID_VACATION,
+                'vacation_type' => $request->vacation_type,
+                // 有給休暇の場合は勤務時間関連のフィールドをクリア
+                'clock_in' => null,
+                'clock_out' => null,
+                'break_time' => null,
+                'actual_work_time' => $this->calculateVacationWorkTime($request->vacation_type),
+                'overtime' => 0,
+                'night_work_time' => 0
+            ];
+
+            if ($timecard) {
+                // 既存のタイムカードを更新
+                return $this->timecardRepository->update($timecard, $timecardData);
+            } else {
+                // 新規タイムカードを作成
+                $this->timecardRepository->create($timecardData);
+                return true;
+            }
+        } catch (\Exception $e) {
+            Log::error('有給休暇タイムカード作成エラー', [
+                'request_id' => $request->id,
+                'target_date' => $request->target_date,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * 有給休暇種別に基づいて勤務時間を計算
+     *
+     * @param string $vacationType 有給休暇種別（full/am/pm）
+     * @return int 勤務時間（分）
+     */
+    private function calculateVacationWorkTime(string $vacationType): int
+    {
+        // 有給休暇種別に応じた勤務時間を計算
+        // 全日: 0分、半休: 通常勤務時間の半分
+        $regularWorkMinutes = WorkTimeConstants::REGULAR_WORK_MINUTES;
+
+        switch ($vacationType) {
+            case Timecard::VACATION_TYPE_FULL:
+                return 0; // 全日休暇は勤務時間0
+            case Timecard::VACATION_TYPE_AM:
+            case Timecard::VACATION_TYPE_PM:
+                return $regularWorkMinutes / 2; // 半休は半日分の勤務時間
+            default:
+                return 0;
+        }
     }
 }
