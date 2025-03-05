@@ -192,7 +192,7 @@ class CreateRequest extends FormRequest
         // 不要なフィールドを削除
         unset($validated['is_timecard_request']);
         unset($validated['is_paid_vacation_request']);
-        unset($validated['timecard_id']); // 念のため
+        unset($validated['timecard_id']);
 
         return array_filter($validated, function ($value) {
             return $value !== null;

@@ -79,7 +79,7 @@ class Timecard extends Model
      */
     public function requests(): HasMany
     {
-        return $this->hasMany(Request::class, 'target_date', 'date');
+        return $this->hasMany(Request::class, 'timecard_id');
     }
 
     /**

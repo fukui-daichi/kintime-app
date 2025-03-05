@@ -74,14 +74,30 @@ class RequestService
     {
         try {
             return DB::transaction(function () use ($data) {
-                $createData = array_merge($data, [
-                    'timecard_id' => (int)$data['timecard_id']
-                ]);
+                // データ内にtimecard_idが存在するかチェック
+                $createData = $data;
+
+                // 有給休暇申請の場合はtimecard_idが不要
+                if (isset($data['request_type']) &&
+                    $data['request_type'] === RequestConstants::REQUEST_TYPE_PAID_VACATION) {
+                    // timecard_idが設定されていれば削除
+                    if (isset($createData['timecard_id'])) {
+                        unset($createData['timecard_id']);
+                    }
+                } else {
+                    // 勤怠修正申請の場合はtimecard_idが必要
+                    if (isset($createData['timecard_id'])) {
+                        $createData['timecard_id'] = (int)$data['timecard_id'];
+                    }
+                }
 
                 $request = $this->requestRepository->create($createData);
 
-                if ($request->request_type === RequestConstants::REQUEST_TYPE_TIMECARD) {
-                    $timecard = $this->timecardRepository->findById($request->timecard_id);
+                // 勤怠修正申請の場合はタイムカードのステータスを更新
+                if (isset($data['request_type']) &&
+                    $data['request_type'] === RequestConstants::REQUEST_TYPE_TIMECARD &&
+                    isset($data['timecard_id'])) {
+                    $timecard = $this->timecardRepository->findById((int)$data['timecard_id']);
                     if ($timecard) {
                         $timecard->update(['status' => 'pending_approval']);
                     }
