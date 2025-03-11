@@ -1,100 +1,95 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
-    <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="/">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
-                    </a>
-                </div>
+<!-- モバイル表示時のトグルボタン -->
+<button data-drawer-target="default-sidebar" data-drawer-toggle="default-sidebar" aria-controls="default-sidebar" type="button" class="inline-flex items-center p-2 mt-2 ml-3 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600">
+    <span class="sr-only">メニューを開く</span>
+    <svg class="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
+    </svg>
+</button>
 
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="'/'" :active="request()->is('/')">マイページ</x-nav-link>
-                    <x-nav-link :href="'/timecard'" :active="request()->is('timecard')">勤怠一覧</x-nav-link>
-                    <x-nav-link :href="'/requests'" :active="request()->is('requests')">申請一覧</x-nav-link>
-                </div>
+<!-- サイドバーナビゲーション -->
+<aside id="default-sidebar" class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0" aria-label="Sidebar">
+    <div class="overflow-y-auto py-5 px-3 h-full bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 transition-colors duration-300">
+        <!-- ロゴ -->
+        <div class="flex items-center mb-6">
+            <a href="/" class="flex items-center text-2xl font-semibold text-gray-900 dark:text-white">
+                <span class="self-center text-xl font-semibold whitespace-nowrap">{{ config('app.name', 'Kintime') }}</span>
+            </a>
+        </div>
+
+        <!-- ユーザー情報 -->
+        <div class="flex items-center p-2 mb-6 text-base font-normal text-gray-900 rounded-lg dark:text-white">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white">
+                {{ substr(Auth::user()->first_name, 0, 1) }}
             </div>
-
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->last_name }} {{ Auth::user()->first_name }}</div>
-
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('プロフィール設定') }}
-                        </x-dropdown-link>
-
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('ログアウト') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
+            <div class="ml-3 text-sm font-medium">
+                {{ Auth::user()->last_name }} {{ Auth::user()->first_name }}
             </div>
+        </div>
 
-            <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        <!-- メインメニュー -->
+        <ul class="space-y-2">
+            <li>
+                <a href="{{ url('/') }}" class="flex items-center p-2 text-base font-normal {{ request()->is('/') ? 'text-white bg-primary-600' : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700' }} rounded-lg group">
+                    <svg aria-hidden="true" class="w-6 h-6 {{ request()->is('/') ? 'text-white' : 'text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white' }} transition duration-75" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+                        <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                     </svg>
-                </button>
-            </div>
-        </div>
-    </div>
+                    <span class="ml-3">マイページ</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url('/timecard') }}" class="flex items-center p-2 text-base font-normal {{ request()->is('timecard*') ? 'text-white bg-primary-600' : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700' }} rounded-lg group">
+                    <svg aria-hidden="true" class="w-6 h-6 {{ request()->is('timecard*') ? 'text-white' : 'text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white' }} transition duration-75" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="ml-3">勤怠一覧</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url('/requests') }}" class="flex items-center p-2 text-base font-normal {{ request()->is('requests*') ? 'text-white bg-primary-600' : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700' }} rounded-lg group">
+                    <svg aria-hidden="true" class="w-6 h-6 {{ request()->is('requests*') ? 'text-white' : 'text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white' }} transition duration-75" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="flex-1 ml-3 whitespace-nowrap">申請一覧</span>
+                </a>
+            </li>
+        </ul>
 
-    <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="'/'" :active="request()->is('/')">マイページ</x-responsive-nav-link>
-            <x-responsive-nav-link :href="'/timecard'" :active="request()->is('timecard')">勤怠一覧</x-responsive-nav-link>
-            <x-responsive-nav-link :href="'/requests'" :active="request()->is('requests')">申請一覧</x-responsive-nav-link>
-        </div>
-
-        <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">{{ Auth::user()->last_name }} {{ Auth::user()->first_name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('プロフィール設定') }}
-                </x-responsive-nav-link>
-
-                <!-- Authentication -->
-                <form method="POST" action="{{ route('logout') }}">
+        <!-- セカンダリメニュー -->
+        <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
+            <li>
+                <a href="{{ route('profile.edit') }}" class="flex items-center p-2 text-base font-normal {{ request()->routeIs('profile.edit') ? 'text-white bg-primary-600' : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700' }} rounded-lg group">
+                    <svg aria-hidden="true" class="w-6 h-6 {{ request()->routeIs('profile.edit') ? 'text-white' : 'text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white' }} transition duration-75" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="flex-1 ml-3 whitespace-nowrap">プロフィール設定</span>
+                </a>
+            </li>
+            <li>
+                <form method="POST" action="{{ route('logout') }}" class="flex items-center">
                     @csrf
-
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
-                        {{ __('ログアウト') }}
-                    </x-responsive-nav-link>
+                    <button type="submit" class="flex items-center p-2 w-full text-base font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700">
+                        <svg aria-hidden="true" class="flex-shrink-0 w-6 h-6 text-gray-400 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H3zm9 4a1 1 0 11-2 0 1 1 0 012 0zm-3 3a1 1 0 100 2h4a1 1 0 100-2H9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="ml-3">ログアウト</span>
+                    </button>
                 </form>
-            </div>
+            </li>
+        </ul>
+
+        <!-- テーマカラー切り替え -->
+        <div class="absolute bottom-0 left-0 justify-center p-4 space-x-4 w-full flex bg-white dark:bg-gray-800 z-20 border-r border-gray-200 dark:border-gray-700 transition-colors duration-300">
+            <button type="button" onclick="toggleDarkMode()" class="inline-flex justify-center p-2 text-gray-500 rounded cursor-pointer dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600">
+                <!-- ダークモードアイコン（ライトモード時に表示） -->
+                <svg id="theme-toggle-dark-icon" class="w-6 h-6 block dark:hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                </svg>
+                <!-- ライトモードアイコン（ダークモード時に表示） -->
+                <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden dark:block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+                </svg>
+            </button>
         </div>
     </div>
-</nav>
+</aside>
