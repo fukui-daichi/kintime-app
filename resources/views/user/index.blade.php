@@ -1,4 +1,8 @@
 <x-user-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">マイページ</h2>
+    </x-slot>
+
     {{-- フラッシュメッセージ --}}
     @if (session('success'))
         <x-common.flash-message
