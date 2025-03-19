@@ -1,8 +1,7 @@
 import './bootstrap';
 import 'flowbite';
 import Alpine from 'alpinejs';
-import { toggleDarkMode } from './utils/darkmode.js';
-
+import { toggleDarkMode } from './utils/theme.js';
 
 window.toggleDarkMode = toggleDarkMode;
 

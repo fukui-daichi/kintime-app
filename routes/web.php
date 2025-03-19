@@ -19,6 +19,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
     });
 
+    Route::get('/requests', [RequestController::class, 'index'])->name('requests.index');
+
     // 一般ユーザー専用ルート
     Route::middleware('user')->group(function () {
         // 勤怠関連
@@ -28,10 +30,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/clock-out', [TimecardController::class, 'clockOut'])->name('clockOut');
         });
 
-        // 申請関連のルート（申請の作成・表示など）
+        // 申請作成関連のルート
         Route::prefix('requests')->name('requests.')->group(function () {
-            Route::get('/', [RequestController::class, 'index'])->name('index');
-
             // 勤怠修正申請用ルート
             Route::get('/timecard/{timecard}', [RequestController::class, 'createTimecardModification'])
                 ->name('timecard.create');
@@ -46,9 +46,8 @@ Route::middleware('auth')->group(function () {
 
     // 管理者専用ルート
     Route::middleware('admin')->group(function () {
-        // 申請管理ルート
+        // 申請操作ルート
         Route::prefix('requests')->name('requests.')->group(function () {
-            Route::get('/', [RequestController::class, 'index'])->name('index');
             Route::patch('/{request}/approve', [RequestController::class, 'approve'])->name('approve');
             Route::patch('/{request}/reject', [RequestController::class, 'reject'])->name('reject');
         });
