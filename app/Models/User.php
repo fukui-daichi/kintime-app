@@ -76,6 +76,14 @@ class User extends Authenticatable
     }
 
     /**
+     * ユーザー種別を取得
+     */
+    public function getUserType(): string
+    {
+        return $this->role;
+    }
+
+    /**
      * 管理者判定
      */
     public function isAdmin(): bool
