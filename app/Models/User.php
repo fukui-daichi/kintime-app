@@ -29,8 +29,16 @@ class User extends Authenticatable
         'joined_at',
         'leaved_at',
         'email',
-        'password',
+        'password'
     ];
+
+    /**
+     * フルネーム取得
+     */
+    public function getFullNameAttribute(): string
+    {
+        return "{$this->last_name} {$this->first_name}";
+    }
 
     /**
      * The attributes that should be hidden for serialization.
