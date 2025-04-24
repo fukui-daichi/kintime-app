@@ -18,7 +18,16 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        // 基本情報
+        'employee_number',
+        'last_name',
+        'first_name',
+        'department_id',
+        'employment_type',
+        'role',
+        'is_active',
+        'joined_at',
+        'leaved_at',
         'email',
         'password',
     ];
@@ -43,6 +52,57 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'department_id' => 'integer',
+            'is_active' => 'boolean',
+            'joined_at' => 'date',
+            'leaved_at' => 'date',
         ];
+    }
+
+    /**
+     * 管理者判定
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * 上長（マネージャー）判定
+     */
+    public function isManager(): bool
+    {
+        return $this->role === 'manager';
+    }
+
+    /**
+     * 一般ユーザー判定
+     */
+    public function isUser(): bool
+    {
+        return $this->role === 'user';
+    }
+
+    /**
+     * アカウント有効判定
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active;
+    }
+
+    /**
+     * 在籍中判定
+     */
+    public function isEmployed(): bool
+    {
+        if (!$this->joined_at) {
+            return false;
+        }
+        $today = now()->toDateString();
+        if ($this->leaved_at && $this->leaved_at < $today) {
+            return false;
+        }
+        return $this->joined_at <= $today;
     }
 }
