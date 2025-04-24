@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6" id="profile-update-form">
         @csrf
         @method('patch')
 
@@ -65,12 +65,15 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <x-input-label for="joined_at" :value="__('入社日')" />
-                <x-text-input id="joined_at" name="joined_at" type="date" class="mt-1 block w-full" :value="old('joined_at', $user->joined_at)" required />
+                <x-text-input id="joined_at" name="joined_at" type="date" class="mt-1 block w-full"
+                    :value="old('joined_at', $user->joined_at ? \Carbon\Carbon::parse($user->joined_at)->format('Y-m-d') : '')"
+                    required />
                 <x-input-error class="mt-2" :messages="$errors->get('joined_at')" />
             </div>
             <div>
                 <x-input-label for="leaved_at" :value="__('退社日（任意）')" />
-                <x-text-input id="leaved_at" name="leaved_at" type="date" class="mt-1 block w-full" :value="old('leaved_at', $user->leaved_at)" />
+                <x-text-input id="leaved_at" name="leaved_at" type="date" class="mt-1 block w-full"
+                    :value="old('leaved_at', $user->leaved_at ? \Carbon\Carbon::parse($user->leaved_at)->format('Y-m-d') : '')" />
                 <x-input-error class="mt-2" :messages="$errors->get('leaved_at')" />
             </div>
         </div>
@@ -113,4 +116,5 @@
             @endif
         </div>
     </form>
+
 </section>
