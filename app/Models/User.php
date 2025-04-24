@@ -60,6 +60,14 @@ class User extends Authenticatable
     }
 
     /**
+     * 所属部署
+     */
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    /**
      * 管理者判定
      */
     public function isAdmin(): bool
