@@ -61,7 +61,8 @@ class TimecardRepository
     public function getTodayTimecard(int $userId): ?Timecard
     {
         return Timecard::where('user_id', $userId)
-            ->whereDate('date', today())
+            ->whereDate('date', Carbon::today())
+            ->latest()
             ->first();
     }
 }

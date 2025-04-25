@@ -27,7 +27,7 @@ class TimecardService
 
         return [
             'clockIn' => [
-                'disabled' => $timecard !== null,
+                'disabled' => $timecard !== null && $timecard->clock_in !== null,
                 'label' => '出勤打刻'
             ],
             'clockOut' => [
@@ -35,11 +35,11 @@ class TimecardService
                 'label' => '退勤打刻'
             ],
             'breakStart' => [
-                'disabled' => $timecard === null || $timecard->clock_out !== null || $timecard->break_start !== null,
+                'disabled' => $timecard === null || $timecard->clock_out !== null || $timecard->break_start !== null || ($timecard->break_start !== null && $timecard->break_end === null),
                 'label' => '休憩開始'
             ],
             'breakEnd' => [
-                'disabled' => $timecard === null || $timecard->clock_out !== null || $timecard->break_start === null || $timecard->break_end !== null,
+                'disabled' => $timecard === null || $timecard->clock_out !== null || $timecard->break_start === null || $timecard->break_end !== null || $timecard->break_start === null,
                 'label' => '休憩終了'
             ]
         ];
@@ -52,9 +52,9 @@ class TimecardService
         $today = Carbon::today();
 
         // 既に出勤打刻済みか確認
-        $existing = $this->repository->getLatestTimecard($user->id);
+        $existing = $this->repository->getTodayTimecard($user->id);
 
-        if ($existing && $existing->date->isToday()) {
+        if ($existing && $existing->clock_in !== null) {
             throw new \Exception('既に出勤打刻済みです');
         }
 
