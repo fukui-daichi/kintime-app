@@ -129,4 +129,12 @@ class User extends Authenticatable
         }
         return $this->joined_at <= $today;
     }
+
+    /**
+     * タイムカードリレーション
+     */
+    public function timecards()
+    {
+        return $this->hasMany(Timecard::class);
+    }
 }
