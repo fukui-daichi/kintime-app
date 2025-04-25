@@ -11,37 +11,44 @@ class TimecardRepository
     {
         return Timecard::create([
             'user_id' => $userId,
+            'date' => Carbon::today(),
             'clock_in' => Carbon::now()
         ]);
     }
 
     public function createClockOutRecord(int $userId): Timecard
     {
-        return Timecard::where('user_id', $userId)
+        $timecard = Timecard::where('user_id', $userId)
             ->whereNull('clock_out')
             ->latest()
-            ->firstOrFail()
-            ->update(['clock_out' => Carbon::now()]);
+            ->firstOrFail();
+
+        $timecard->update(['clock_out' => Carbon::now()]);
+        return $timecard->fresh();
     }
 
     public function createBreakStartRecord(int $userId): Timecard
     {
-        return Timecard::where('user_id', $userId)
+        $timecard = Timecard::where('user_id', $userId)
             ->whereNotNull('clock_in')
             ->whereNull('clock_out')
             ->latest()
-            ->firstOrFail()
-            ->update(['break_start' => Carbon::now()]);
+            ->firstOrFail();
+
+        $timecard->update(['break_start' => Carbon::now()]);
+        return $timecard->fresh();
     }
 
     public function createBreakEndRecord(int $userId): Timecard
     {
-        return Timecard::where('user_id', $userId)
+        $timecard = Timecard::where('user_id', $userId)
             ->whereNotNull('break_start')
             ->whereNull('break_end')
             ->latest()
-            ->firstOrFail()
-            ->update(['break_end' => Carbon::now()]);
+            ->firstOrFail();
+
+        $timecard->update(['break_end' => Carbon::now()]);
+        return $timecard->fresh();
     }
 
     public function getLatestTimecard(int $userId): ?Timecard
