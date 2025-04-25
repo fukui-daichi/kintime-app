@@ -4,9 +4,17 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Services\TimecardService;
 
 class DashboardController extends Controller
 {
+    protected $timecardService;
+
+    public function __construct(TimecardService $timecardService)
+    {
+        $this->timecardService = $timecardService;
+    }
+
     public function index()
     {
         /** @var User|null $user */
@@ -22,7 +30,11 @@ class DashboardController extends Controller
             case 'manager':
                 return view('dashboard.manager.index', compact('user'));
             default:
-                return view('dashboard.user.index', compact('user'));
+                $timecardButtonStatus = $this->timecardService->getTimecardButtonStatus($user->id);
+                return view('dashboard.user.index', [
+                    'user' => $user,
+                    'timecardButtonStatus' => $timecardButtonStatus
+                ]);
         }
     }
 }

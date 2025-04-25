@@ -57,4 +57,11 @@ class TimecardRepository
             ->latest()
             ->first();
     }
+
+    public function getTodayTimecard(int $userId): ?Timecard
+    {
+        return Timecard::where('user_id', $userId)
+            ->whereDate('date', today())
+            ->first();
+    }
 }

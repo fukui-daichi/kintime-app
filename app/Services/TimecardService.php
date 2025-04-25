@@ -15,6 +15,35 @@ class TimecardService
     {
         $this->repository = $repository;
     }
+
+    public function getTodayTimecard(int $userId): ?Timecard
+    {
+        return $this->repository->getTodayTimecard($userId);
+    }
+
+    public function getTimecardButtonStatus(int $userId): array
+    {
+        $timecard = $this->repository->getTodayTimecard($userId);
+
+        return [
+            'clockIn' => [
+                'disabled' => $timecard !== null,
+                'label' => '出勤打刻'
+            ],
+            'clockOut' => [
+                'disabled' => $timecard === null || $timecard->clock_out !== null,
+                'label' => '退勤打刻'
+            ],
+            'breakStart' => [
+                'disabled' => $timecard === null || $timecard->clock_out !== null || $timecard->break_start !== null,
+                'label' => '休憩開始'
+            ],
+            'breakEnd' => [
+                'disabled' => $timecard === null || $timecard->clock_out !== null || $timecard->break_start === null || $timecard->break_end !== null,
+                'label' => '休憩終了'
+            ]
+        ];
+    }
     /**
      * 出勤打刻
      */

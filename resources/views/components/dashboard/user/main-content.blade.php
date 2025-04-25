@@ -10,16 +10,28 @@
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
         <h3 class="text-lg font-semibold mb-2 dark:text-white">勤怠状態</h3>
         <div class="mb-2 dark:text-white">状態: <span class="font-bold dark:text-white">退勤中</span></div>
-        <x-timecard.clock-in-form />
-        <x-timecard.clock-out-form class="ml-2" />
+        <div class="flex space-x-2">
+          <x-timecard.clock-in-form
+              :disabled="$timecardButtonStatus['clockIn']['disabled']"
+              :label="$timecardButtonStatus['clockIn']['label']" />
+          <x-timecard.clock-out-form
+              :disabled="$timecardButtonStatus['clockOut']['disabled']"
+              :label="$timecardButtonStatus['clockOut']['label']" />
+        </div>
       </div>
 
       <!-- 休憩状態とボタン -->
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
         <h3 class="text-lg font-semibold mb-2 dark:text-white">休憩状態</h3>
         <div class="mb-2 dark:text-white">状態: <span class="font-bold dark:text-white">休憩中でない</span></div>
-        <x-timecard.break-start-form />
-        <x-timecard.break-end-form class="ml-2" />
+        <div class="flex space-x-2">
+          <x-timecard.break-start-form
+              :disabled="$timecardButtonStatus['breakStart']['disabled']"
+              :label="$timecardButtonStatus['breakStart']['label']" />
+          <x-timecard.break-end-form
+              :disabled="$timecardButtonStatus['breakEnd']['disabled']"
+              :label="$timecardButtonStatus['breakEnd']['label']" />
+        </div>
       </div>
     </div>
     <!-- 勤務時間サマリー -->

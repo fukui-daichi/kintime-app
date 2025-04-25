@@ -6,5 +6,7 @@
     <x-user.sidebar />
 
     <!-- MainContent -->
-    <x-dashboard.user.main-content />
+    <x-dashboard.user.main-content
+        :user="$user"
+        :timecardButtonStatus="$timecardButtonStatus" />
 </x-app-layout>
