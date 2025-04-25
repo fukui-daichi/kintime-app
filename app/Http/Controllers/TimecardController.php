@@ -18,52 +18,52 @@ class TimecardController extends Controller
     /**
      * 出勤打刻
      */
-    public function clockIn(): JsonResponse
+    public function clockIn()
     {
         try {
-            $timecard = $this->timecardService->clockIn(Auth::user());
-            return response()->json($timecard, 201);
+            $this->timecardService->clockIn(Auth::user());
+            return back()->with('status', '出勤打刻が完了しました');
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            return back()->with('error', $e->getMessage());
         }
     }
 
     /**
      * 退勤打刻
      */
-    public function clockOut(): JsonResponse
+    public function clockOut()
     {
         try {
-            $timecard = $this->timecardService->clockOut(Auth::user());
-            return response()->json($timecard);
+            $this->timecardService->clockOut(Auth::user());
+            return back()->with('status', '退勤打刻が完了しました');
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            return back()->with('error', $e->getMessage());
         }
     }
 
     /**
      * 休憩開始
      */
-    public function startBreak(): JsonResponse
+    public function startBreak()
     {
         try {
-            $timecard = $this->timecardService->startBreak(Auth::user());
-            return response()->json($timecard);
+            $this->timecardService->startBreak(Auth::user());
+            return back()->with('status', '休憩開始打刻が完了しました');
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            return back()->with('error', $e->getMessage());
         }
     }
 
     /**
      * 休憩終了
      */
-    public function endBreak(): JsonResponse
+    public function endBreak()
     {
         try {
-            $timecard = $this->timecardService->endBreak(Auth::user());
-            return response()->json($timecard);
+            $this->timecardService->endBreak(Auth::user());
+            return back()->with('status', '休憩終了打刻が完了しました');
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            return back()->with('error', $e->getMessage());
         }
     }
 }

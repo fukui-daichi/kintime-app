@@ -4,10 +4,17 @@ namespace App\Services;
 
 use App\Models\Timecard;
 use App\Models\User;
+use App\Repositories\TimecardRepository;
 use Illuminate\Support\Carbon;
 
 class TimecardService
 {
+    protected $repository;
+
+    public function __construct(TimecardRepository $repository)
+    {
+        $this->repository = $repository;
+    }
     /**
      * 出勤打刻
      */
@@ -16,20 +23,13 @@ class TimecardService
         $today = Carbon::today();
 
         // 既に出勤打刻済みか確認
-        $existing = Timecard::where('user_id', $user->id)
-            ->where('date', $today)
-            ->first();
+        $existing = $this->repository->getLatestTimecard($user->id);
 
-        if ($existing) {
+        if ($existing && $existing->date->isToday()) {
             throw new \Exception('既に出勤打刻済みです');
         }
 
-        return Timecard::create([
-            'user_id' => $user->id,
-            'date' => $today,
-            'clock_in' => Carbon::now(),
-            'status' => 'pending'
-        ]);
+        return $this->repository->createClockInRecord($user->id);
     }
 
     /**
@@ -37,21 +37,13 @@ class TimecardService
      */
     public function clockOut(User $user): Timecard
     {
-        $today = Carbon::today();
+        $timecard = $this->repository->getLatestTimecard($user->id);
 
-        $timecard = Timecard::where('user_id', $user->id)
-            ->where('date', $today)
-            ->firstOrFail();
-
-        if ($timecard->clock_out) {
-            throw new \Exception('既に退勤打刻済みです');
+        if (!$timecard || $timecard->clock_out) {
+            throw new \Exception('退勤打刻ができません');
         }
 
-        $timecard->update([
-            'clock_out' => Carbon::now()
-        ]);
-
-        return $timecard;
+        return $this->repository->createClockOutRecord($user->id);
     }
 
     /**
@@ -59,21 +51,13 @@ class TimecardService
      */
     public function startBreak(User $user): Timecard
     {
-        $today = Carbon::today();
+        $timecard = $this->repository->getLatestTimecard($user->id);
 
-        $timecard = Timecard::where('user_id', $user->id)
-            ->where('date', $today)
-            ->firstOrFail();
-
-        if ($timecard->break_start) {
-            throw new \Exception('既に休憩開始打刻済みです');
+        if (!$timecard || $timecard->break_start) {
+            throw new \Exception('休憩開始打刻ができません');
         }
 
-        $timecard->update([
-            'break_start' => Carbon::now()
-        ]);
-
-        return $timecard;
+        return $this->repository->createBreakStartRecord($user->id);
     }
 
     /**
@@ -81,24 +65,12 @@ class TimecardService
      */
     public function endBreak(User $user): Timecard
     {
-        $today = Carbon::today();
+        $timecard = $this->repository->getLatestTimecard($user->id);
 
-        $timecard = Timecard::where('user_id', $user->id)
-            ->where('date', $today)
-            ->firstOrFail();
-
-        if (!$timecard->break_start) {
-            throw new \Exception('休憩開始打刻がありません');
+        if (!$timecard || !$timecard->break_start || $timecard->break_end) {
+            throw new \Exception('休憩終了打刻ができません');
         }
 
-        if ($timecard->break_end) {
-            throw new \Exception('既に休憩終了打刻済みです');
-        }
-
-        $timecard->update([
-            'break_end' => Carbon::now()
-        ]);
-
-        return $timecard;
+        return $this->repository->createBreakEndRecord($user->id);
     }
 }
