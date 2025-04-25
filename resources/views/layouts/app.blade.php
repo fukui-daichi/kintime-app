@@ -15,8 +15,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-gray-50 dark:bg-gray-900 h-full">
-        <div class="flex flex-col h-full">
-            {{ $slot }}
-        </div>
+        {{ $slot }}
     </body>
 </html>
