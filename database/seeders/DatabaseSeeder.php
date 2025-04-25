@@ -113,15 +113,40 @@ class DatabaseSeeder extends Seeder
                     $breakStart = $clockIn->copy()->addHours(rand(1, 6));
                     $breakEnd = $breakStart->copy()->addHours(1);
 
-                    Timecard::factory()->create([
-                        'user_id' => $user->id,
-                        'date' => $currentDate,
-                        'clock_in' => $clockIn,
-                        'clock_out' => $clockOut,
-                        'break_start' => $breakStart,
-                        'break_end' => $breakEnd,
-                        'status' => 'approved'
-                    ]);
+                    // ユーザーごとに異なる勤務パターンを割り当て
+                    if ($user->id % 4 === 0) {
+                        // 通常勤務（残業なし）
+                        Timecard::factory()->create([
+                            'user_id' => $user->id,
+                            'date' => $currentDate,
+                            'clock_in' => $clockIn,
+                            'clock_out' => $clockOut,
+                            'break_start' => $breakStart,
+                            'break_end' => $breakEnd,
+                            'status' => 'approved'
+                        ]);
+                    } elseif ($user->id % 4 === 1) {
+                        // 残業あり
+                        Timecard::factory()->withOvertime()->create([
+                            'user_id' => $user->id,
+                            'date' => $currentDate,
+                            'status' => 'approved'
+                        ]);
+                    } elseif ($user->id % 4 === 2) {
+                        // 深夜勤務あり
+                        Timecard::factory()->withNightWork()->create([
+                            'user_id' => $user->id,
+                            'date' => $currentDate,
+                            'status' => 'approved'
+                        ]);
+                    } else {
+                        // 深夜勤務+残業あり
+                        Timecard::factory()->withOvertimeAndNightWork()->create([
+                            'user_id' => $user->id,
+                            'date' => $currentDate,
+                            'status' => 'approved'
+                        ]);
+                    }
                 }
                 $currentDate->addDay();
             }

@@ -69,4 +69,44 @@ class TimecardFactory extends Factory
             ];
         });
     }
+
+    public function withOvertime()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'clock_in' => now()->subHours(10),
+                'clock_out' => now(),
+                'break_start' => now()->subHours(5),
+                'break_end' => now()->subHours(4),
+                'overtime_minutes' => 60,
+                'night_minutes' => 0,
+            ];
+        });
+    }
+
+    public function withNightWork()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'clock_in' => Carbon::today()->setHour(22),
+                'clock_out' => Carbon::tomorrow()->setHour(2),
+                'overtime_minutes' => 0,
+                'night_minutes' => 240,
+            ];
+        });
+    }
+
+    public function withOvertimeAndNightWork()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'clock_in' => Carbon::today()->setHour(20),
+                'clock_out' => Carbon::tomorrow()->setHour(3),
+                'break_start' => Carbon::today()->setHour(23),
+                'break_end' => Carbon::tomorrow()->setHour(0)->setMinute(30),
+                'overtime_minutes' => 60,
+                'night_minutes' => 330,
+            ];
+        });
+    }
 }

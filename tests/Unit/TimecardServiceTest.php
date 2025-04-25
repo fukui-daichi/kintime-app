@@ -147,4 +147,67 @@ class TimecardServiceTest extends TestCase
         $this->assertTrue($status['breakStart']['disabled']);
         $this->assertTrue($status['breakEnd']['disabled']);
     }
+
+    public function test_calculate_overtime_no_overtime()
+    {
+        $user = User::factory()->create();
+        $timecard = Timecard::factory()->create([
+            'user_id' => $user->id,
+            'clock_in' => now()->setHour(9)->setMinute(0),
+            'clock_out' => now()->setHour(17)->setMinute(0),
+            'break_start' => now()->setHour(12)->setMinute(0),
+            'break_end' => now()->setHour(13)->setMinute(0)
+        ]);
+
+        $result = $this->service->calculateOvertime($timecard);
+        $this->assertEquals(0, $result['overtime']);
+        $this->assertEquals(0, $result['night']);
+    }
+
+    public function test_calculate_overtime_with_overtime()
+    {
+        $user = User::factory()->create();
+        $timecard = Timecard::factory()->create([
+            'user_id' => $user->id,
+            'clock_in' => now()->setHour(9)->setMinute(0),
+            'clock_out' => now()->setHour(19)->setMinute(0),
+            'break_start' => now()->setHour(12)->setMinute(0),
+            'break_end' => now()->setHour(13)->setMinute(0)
+        ]);
+
+        $result = $this->service->calculateOvertime($timecard);
+        $this->assertEquals(60, $result['overtime']); // 1時間の残業 (9時間実働 - 8時間基本)
+        $this->assertEquals(0, $result['night']);
+    }
+
+    public function test_calculate_night_time()
+    {
+        $user = User::factory()->create();
+        $timecard = Timecard::factory()->create([
+            'user_id' => $user->id,
+            'clock_in' => now()->setHour(20)->setMinute(0),
+            'clock_out' => now()->addDay()->setHour(2)->setMinute(0),
+            'break_start' => null,
+            'break_end' => null
+        ]);
+
+        $result = $this->service->calculateOvertime($timecard);
+        $this->assertEquals(240, $result['night']); // 22:00-2:00 = 4時間
+    }
+
+    public function test_calculate_overtime_with_night_crossing()
+    {
+        $user = User::factory()->create();
+        $timecard = Timecard::factory()->create([
+            'user_id' => $user->id,
+            'clock_in' => now()->setHour(21)->setMinute(0),
+            'clock_out' => now()->addDay()->setHour(6)->setMinute(0),
+            'break_start' => now()->setHour(23)->setMinute(0),
+            'break_end' => now()->addDay()->setHour(0)->setMinute(30)
+        ]);
+
+        $result = $this->service->calculateOvertime($timecard);
+        $this->assertEquals(0, $result['overtime']); // 実働7.5時間 - 基本8時間 = -0.5時間 → 0
+        $this->assertEquals(330, $result['night']); // 22:00-5:00 (休憩時間0:30-1:00を除く)
+    }
 }
