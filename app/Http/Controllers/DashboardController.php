@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Services\TimecardService;
 
@@ -31,9 +32,16 @@ class DashboardController extends Controller
                 return view('dashboard.manager.index', compact('user'));
             default:
                 $timecardButtonStatus = $this->timecardService->getTimecardButtonStatus($user->id);
+                $todayTimecard = $this->timecardService->getTodayTimecard($user->id);
+
+                $timecardData = $todayTimecard
+                    ? $this->timecardService->formatTimecardForDisplay($todayTimecard)
+                    : null;
+
                 return view('dashboard.user.index', [
                     'user' => $user,
-                    'timecardButtonStatus' => $timecardButtonStatus
+                    'timecardButtonStatus' => $timecardButtonStatus,
+                    'timecard' => $timecardData
                 ]);
         }
     }

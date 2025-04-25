@@ -6,6 +6,7 @@ use App\Models\Timecard;
 use App\Models\User;
 use App\Repositories\TimecardRepository;
 use App\Constants\WorkTimeConstants;
+use App\Helpers\TimeHelper;
 use Illuminate\Support\Carbon;
 
 class TimecardService
@@ -173,5 +174,31 @@ class TimecardService
             'overtime_minutes' => $result['overtime'],
             'night_minutes' => $result['night']
         ]);
+    }
+
+    /**
+     * 表示用にタイムカードデータをフォーマット
+     */
+    public function formatTimecardForDisplay(Timecard $timecard): array
+    {
+        return [
+            'overtime' => TimeHelper::formatMinutesToTime($timecard->overtime_minutes),
+            'night_work' => TimeHelper::formatMinutesToTime($timecard->night_minutes),
+            'clock_in' => $timecard->clock_in ? TimeHelper::formatDateTime($timecard->clock_in) : '--:--',
+            'clock_out' => $timecard->clock_out ? TimeHelper::formatDateTime($timecard->clock_out) : '--:--',
+            'break_time' => TimeHelper::formatMinutesToTime(
+                $timecard->break_start && $timecard->break_end
+                ? $timecard->break_start->diffInMinutes($timecard->break_end)
+                : 0
+            ),
+            'work_time' => TimeHelper::formatMinutesToTime(
+                $timecard->clock_in && $timecard->clock_out
+                ? $timecard->clock_in->diffInMinutes($timecard->clock_out) -
+                ($timecard->break_start && $timecard->break_end
+                    ? $timecard->break_start->diffInMinutes($timecard->break_end)
+                    : 0)
+                : 0
+            )
+        ];
     }
 }

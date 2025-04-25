@@ -37,22 +37,30 @@
     <!-- 勤務時間サマリー -->
     <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 mb-4 bg-white dark:bg-gray-800">
       <h3 class="text-lg font-semibold mb-4 dark:text-white">今日の勤務時間</h3>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-3 gap-4">
         <div>
           <div class="text-sm text-gray-500 dark:text-gray-400">出勤時間</div>
-          <div class="text-xl font-bold dark:text-white">--:--</div>
+          <div class="text-xl font-bold dark:text-white">{{ $timecard['clock_in'] ?? '--:--' }}</div>
         </div>
         <div>
           <div class="text-sm text-gray-500 dark:text-gray-400">退勤時間</div>
-          <div class="text-xl font-bold dark:text-white">--:--</div>
+          <div class="text-xl font-bold dark:text-white">{{ $timecard['clock_out'] ?? '--:--' }}</div>
         </div>
         <div>
           <div class="text-sm text-gray-500 dark:text-gray-400">休憩時間</div>
-          <div class="text-xl font-bold dark:text-white">00:00</div>
+          <div class="text-xl font-bold dark:text-white">{{ $timecard['break_time'] ?? '00:00' }}</div>
         </div>
         <div>
           <div class="text-sm text-gray-500 dark:text-gray-400">実働時間</div>
-          <div class="text-xl font-bold dark:text-white">00:00</div>
+          <div class="text-xl font-bold dark:text-white">{{ $timecard['work_time'] ?? '00:00' }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">残業時間</div>
+          <div class="text-xl font-bold text-red-500 dark:text-red-400">{{ $timecard['overtime'] ?? '00:00' }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">深夜時間</div>
+          <div class="text-xl font-bold text-blue-500 dark:text-blue-400">{{ $timecard['night_work'] ?? '00:00' }}</div>
         </div>
       </div>
     </div>

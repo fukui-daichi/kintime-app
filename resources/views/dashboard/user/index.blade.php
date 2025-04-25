@@ -8,5 +8,6 @@
     <!-- MainContent -->
     <x-dashboard.user.main-content
         :user="$user"
-        :timecardButtonStatus="$timecardButtonStatus" />
+        :timecardButtonStatus="$timecardButtonStatus"
+        :timecard="$timecard" />
 </x-app-layout>
