@@ -99,29 +99,30 @@ class DatabaseSeeder extends Seeder
             $currentDate = $startDate->copy();
 
             while ($currentDate <= $today) {
-                // 出勤時間（9時〜15時の間でランダム）
-                $clockInHour = rand(9, 15);
-                $clockIn = $currentDate->copy()->setTime($clockInHour, rand(0, 59), 0);
+                if (!$currentDate->isWeekend()) {
+                    // 出勤時間（9時〜15時の間でランダム）
+                    $clockInHour = rand(9, 15);
+                    $clockIn = $currentDate->copy()->setTime($clockInHour, rand(0, 59), 0);
 
-                // 退勤時間（出勤時間 + 8時間以上、最大23時まで）
-                $minClockOut = $clockIn->copy()->addHours(8);
-                $maxClockOut = $currentDate->copy()->setTime(23, 59, 59);
-                $clockOut = $minClockOut->addMinutes(rand(0, $maxClockOut->diffInMinutes($minClockOut)));
+                    // 退勤時間（出勤時間 + 8時間以上、最大23時まで）
+                    $minClockOut = $clockIn->copy()->addHours(8);
+                    $maxClockOut = $currentDate->copy()->setTime(23, 59, 59);
+                    $clockOut = $minClockOut->addMinutes(rand(0, $maxClockOut->diffInMinutes($minClockOut)));
 
-                // 休憩時間（1時間）
-                $breakStart = $clockIn->copy()->addHours(rand(1, 6));
-                $breakEnd = $breakStart->copy()->addHours(1);
+                    // 休憩時間（1時間）
+                    $breakStart = $clockIn->copy()->addHours(rand(1, 6));
+                    $breakEnd = $breakStart->copy()->addHours(1);
 
-                Timecard::factory()->create([
-                    'user_id' => $user->id,
-                    'date' => $currentDate,
-                    'clock_in' => $clockIn,
-                    'clock_out' => $clockOut,
-                    'break_start' => $breakStart,
-                    'break_end' => $breakEnd,
-                    'status' => 'approved'
-                ]);
-
+                    Timecard::factory()->create([
+                        'user_id' => $user->id,
+                        'date' => $currentDate,
+                        'clock_in' => $clockIn,
+                        'clock_out' => $clockOut,
+                        'break_start' => $breakStart,
+                        'break_end' => $breakEnd,
+                        'status' => 'approved'
+                    ]);
+                }
                 $currentDate->addDay();
             }
         }
