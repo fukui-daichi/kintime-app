@@ -18,11 +18,11 @@ class DashboardController extends Controller
 
         switch ($user->getUserType()) {
             case 'admin':
-                return view('dashboard.admin', compact('user'));
+                return view('dashboard.admin.index', compact('user'));
             case 'manager':
-                return view('dashboard.manager', compact('user'));
+                return view('dashboard.manager.index', compact('user'));
             default:
-                return view('dashboard.user', compact('user'));
+                return view('dashboard.user.index', compact('user'));
         }
     }
 }
