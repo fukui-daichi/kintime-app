@@ -10,24 +10,16 @@
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
         <h3 class="text-lg font-semibold mb-2 dark:text-white">勤怠状態</h3>
         <div class="mb-2 dark:text-white">状態: <span class="font-bold dark:text-white">退勤中</span></div>
-        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-          出勤
-        </button>
-        <button class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded ml-2" disabled>
-          退勤
-        </button>
+        <x-timecard.clock-in-button id="clock-in-btn">出勤打刻</x-timecard.clock-in-button>
+        <x-timecard.clock-out-button id="clock-out-btn" class="ml-2" disabled>退勤打刻</x-timecard.clock-out-button>
       </div>
 
       <!-- 休憩状態とボタン -->
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
         <h3 class="text-lg font-semibold mb-2 dark:text-white">休憩状態</h3>
         <div class="mb-2 dark:text-white">状態: <span class="font-bold dark:text-white">休憩中でない</span></div>
-        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" disabled>
-          休憩開始
-        </button>
-        <button class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded ml-2" disabled>
-          休憩終了
-        </button>
+        <x-timecard.break-start-button id="break-start-btn" disabled>休憩開始</x-timecard.break-start-button>
+        <x-timecard.break-end-button id="break-end-btn" class="ml-2" disabled>休憩終了</x-timecard.break-end-button>
       </div>
     </div>
     <!-- 勤務時間サマリー -->
@@ -117,5 +109,46 @@
 
     // 1秒ごとに更新
     setInterval(updateCurrentTime, 1000);
+
+    // 打刻ボタン処理
+    document.getElementById('clock-in-btn')?.addEventListener('click', async () => {
+      try {
+        const response = await axios.post('/timecard/clock-in');
+        alert('出勤打刻が完了しました');
+        location.reload();
+      } catch (error) {
+        alert(error.response?.data?.message || 'エラーが発生しました');
+      }
+    });
+
+    document.getElementById('clock-out-btn')?.addEventListener('click', async () => {
+      try {
+        const response = await axios.post('/timecard/clock-out');
+        alert('退勤打刻が完了しました');
+        location.reload();
+      } catch (error) {
+        alert(error.response?.data?.message || 'エラーが発生しました');
+      }
+    });
+
+    document.getElementById('break-start-btn')?.addEventListener('click', async () => {
+      try {
+        const response = await axios.post('/timecard/break-start');
+        alert('休憩開始打刻が完了しました');
+        location.reload();
+      } catch (error) {
+        alert(error.response?.data?.message || 'エラーが発生しました');
+      }
+    });
+
+    document.getElementById('break-end-btn')?.addEventListener('click', async () => {
+      try {
+        const response = await axios.post('/timecard/break-end');
+        alert('休憩終了打刻が完了しました');
+        location.reload();
+      } catch (error) {
+        alert(error.response?.data?.message || 'エラーが発生しました');
+      }
+    });
   </script>
   @endpush
