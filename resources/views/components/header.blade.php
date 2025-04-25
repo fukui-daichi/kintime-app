@@ -93,11 +93,15 @@
             aria-labelledby="dropdown"
           >
             <li>
-              <a
-                href="#"
-                class="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                >ログアウト</a
-              >
+              <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button
+                  type="submit"
+                  class="w-full text-left block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  ログアウト
+                </button>
+              </form>
             </li>
           </ul>
         </div>
