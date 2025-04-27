@@ -93,31 +93,6 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-      <!-- 月間勤務時間 -->
-      <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
-        <div class="text-sm text-gray-500 dark:text-gray-400">今月の勤務時間</div>
-        <div class="text-xl font-bold dark:text-white">00:00</div>
-      </div>
-
-      <!-- 残業時間 -->
-      <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
-        <div class="text-sm text-gray-500 dark:text-gray-400">今月の残業時間</div>
-        <div class="text-xl font-bold dark:text-white">00:00</div>
-      </div>
-
-      <!-- 有給残日数 -->
-      <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
-        <div class="text-sm text-gray-500 dark:text-gray-400">有給残日数</div>
-        <div class="text-xl font-bold dark:text-white">0日</div>
-      </div>
-
-      <!-- 遅刻回数 -->
-      <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
-        <div class="text-sm text-gray-500 dark:text-gray-400">今月の遅刻回数</div>
-        <div class="text-xl font-bold dark:text-white">0回</div>
-      </div>
-    </div>
 </main>
 
 <script>

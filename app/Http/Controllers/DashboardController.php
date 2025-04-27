@@ -41,7 +41,9 @@ class DashboardController extends Controller
                 return view('dashboard.user.index', [
                     'user' => $user,
                     'timecardButtonStatus' => $timecardButtonStatus,
-                    'timecard' => $timecardData
+                    'timecard' => $todayTimecard
+                        ? $this->timecardService->formatTimecardForDisplay($todayTimecard)
+                        : null
                 ]);
         }
     }
