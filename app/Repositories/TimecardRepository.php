@@ -98,4 +98,17 @@ class TimecardRepository
             ->orderBy('date', 'asc')
             ->get();
     }
+
+    /**
+     * ユーザーの勤怠データが存在する年を取得
+     */
+    public function getAvailableYears(int $userId): array
+    {
+        return Timecard::where('user_id', $userId)
+            ->selectRaw('YEAR(date) as year')
+            ->groupBy('year')
+            ->orderBy('year')
+            ->pluck('year')
+            ->toArray();
+    }
 }

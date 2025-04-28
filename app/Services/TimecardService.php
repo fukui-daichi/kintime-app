@@ -266,4 +266,16 @@ class TimecardService
         return '未打刻';
     }
 
+    /**
+     * 年選択肢を取得
+     */
+    public function getYearOptions(int $userId): array
+    {
+        $years = $this->repository->getAvailableYears($userId);
+        $minYear = min($years);
+        $maxYear = max($years);
+
+        // データがある最小年〜最大年+1年
+        return range($minYear, $maxYear + 1);
+    }
 }
