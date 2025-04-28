@@ -10,9 +10,17 @@ export default {
         './resources/views/**/*.blade.php',
         './node_modules/flowbite/**/*.js'
     ],
+    safelist: [
+        'bg-weekend-sat',
+        'bg-weekend-sun',
+    ],
 
     theme: {
         extend: {
+            colors: {
+                'weekend-sat': 'rgba(0, 0, 255, 0.1)',
+                'weekend-sun': 'rgba(255, 0, 0, 0.1)',
+            },
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },

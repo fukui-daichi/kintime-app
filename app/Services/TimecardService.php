@@ -200,7 +200,9 @@ class TimecardService
                     : 0)
                 : 0
             ),
-            'date' => $timecard->date->format('m-d'),
+            'date' => $timecard->date->locale('ja')->isoFormat('M月D日（dd）'),
+            'day_class' => $timecard->date->dayOfWeek === 0 ? 'bg-weekend-sun' :
+                         ($timecard->date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
             'status' => $this->getStatusLabel($timecard)
         ];
     }
@@ -234,8 +236,9 @@ class TimecardService
             if (isset($timecards[$md])) {
                 $result[] = $this->formatTimecardForDisplay($timecards[$md]);
             } else {
+                $date = Carbon::createFromFormat('m-d', $md);
                 $result[] = [
-                    'date' => $md,
+                    'date' => $date->locale('ja')->isoFormat('M月D日（dd）'),
                     'clock_in' => '--:--',
                     'clock_out' => '--:--',
                     'break_time' => '00:00',
@@ -243,6 +246,8 @@ class TimecardService
                     'overtime' => '00:00',
                     'night_work' => '00:00',
                     'status' => '未打刻',
+                    'day_class' => $date->dayOfWeek === 0 ? 'bg-weekend-sun' :
+                                 ($date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
                 ];
             }
         }

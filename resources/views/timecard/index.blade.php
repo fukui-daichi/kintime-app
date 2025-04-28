@@ -45,7 +45,7 @@
                             </thead>
                             <tbody>
                                 @forelse ($timecards as $timecard)
-                                    <tr class="border-b dark:border-gray-700">
+                                    <tr class="border-b dark:border-gray-700 {{ $timecard['day_class'] }}">
                                         <td class="px-4 py-3">{{ $timecard['date'] }}</td>
                                         <td class="px-4 py-3">{{ $timecard['clock_in'] }}</td>
                                         <td class="px-4 py-3">{{ $timecard['clock_out'] }}</td>
