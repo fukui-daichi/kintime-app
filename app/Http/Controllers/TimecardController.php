@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\TimecardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -65,5 +66,31 @@ class TimecardController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * 勤怠一覧表示（月次・ページネーションなし・深夜残業時間含む）
+     */
+    public function index()
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            abort(404);
+        }
+
+        $now = now();
+        $year = (int)request()->input('year', $now->year);
+        $month = (int)request()->input('month', $now->month);
+
+        $timecards = $this->timecardService->getTimecardsByMonth($user->id, $year, $month);
+
+        return view('timecard.index', [
+            'timecards' => $timecards,
+            'user' => $user,
+            'year' => $year,
+            'month' => $month,
+        ]);
     }
 }

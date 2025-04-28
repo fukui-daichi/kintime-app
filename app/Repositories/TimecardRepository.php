@@ -65,4 +65,37 @@ class TimecardRepository
             ->latest()
             ->first();
     }
+
+    /**
+     * ユーザーIDと期間で勤怠データを取得
+     */
+    public function getByUserIdAndPeriod(int $userId, ?Carbon $startDate = null, ?Carbon $endDate = null)
+    {
+        $query = Timecard::where('user_id', $userId)
+            ->orderBy('date', 'desc');
+
+        if ($startDate) {
+            $query->whereDate('date', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('date', '<=', $endDate);
+        }
+
+        return $query->paginate(20);
+    }
+
+    /**
+     * ユーザーIDと年月で勤怠データを取得（月内全日分）
+     */
+    public function getByUserIdAndMonth(int $userId, int $year, int $month)
+    {
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+
+        return Timecard::where('user_id', $userId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date', 'asc')
+            ->get();
+    }
 }

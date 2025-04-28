@@ -46,6 +46,7 @@ class TimecardService
             ]
         ];
     }
+
     /**
      * 出勤打刻
      */
@@ -198,8 +199,71 @@ class TimecardService
                     ? $timecard->break_start->diffInMinutes($timecard->break_end)
                     : 0)
                 : 0
-            )
+            ),
+            'date' => $timecard->date->format('m-d'),
+            'status' => $this->getStatusLabel($timecard)
         ];
+    }
+
+    /**
+     * ユーザーIDと期間で勤怠データを取得
+     */
+    public function getTimecardsByPeriod(int $userId, ?Carbon $startDate = null, ?Carbon $endDate = null)
+    {
+        $timecards = $this->repository->getByUserIdAndPeriod($userId, $startDate, $endDate);
+
+        $timecards->getCollection()->transform(function ($timecard) {
+            return $this->formatTimecardForDisplay($timecard);
+        });
+
+        return $timecards;
+    }
+
+    /**
+     * ユーザーIDと年月で勤怠データを取得（月内全日分、空欄も含めて返す）
+     */
+    public function getTimecardsByMonth(int $userId, int $year, int $month)
+    {
+        $dateList = \App\Helpers\TimeHelper::getMonthDateList($year, $month);
+        $timecards = $this->repository->getByUserIdAndMonth($userId, $year, $month)->keyBy(function ($tc) {
+            return date('m-d', strtotime($tc->date));
+        });
+
+        $result = [];
+        foreach ($dateList as $md) {
+            if (isset($timecards[$md])) {
+                $result[] = $this->formatTimecardForDisplay($timecards[$md]);
+            } else {
+                $result[] = [
+                    'date' => $md,
+                    'clock_in' => '--:--',
+                    'clock_out' => '--:--',
+                    'break_time' => '00:00',
+                    'work_time' => '00:00',
+                    'overtime' => '00:00',
+                    'night_work' => '00:00',
+                    'status' => '未打刻',
+                ];
+            }
+        }
+        return collect($result);
+    }
+
+    /**
+     * 勤怠ステータスラベルを取得
+     */
+    private function getStatusLabel(Timecard $timecard): string
+    {
+        if ($timecard->clock_out) {
+            return '退勤済み';
+        }
+        if ($timecard->break_start && !$timecard->break_end) {
+            return '休憩中';
+        }
+        if ($timecard->clock_in) {
+            return '勤務中';
+        }
+        return '未打刻';
     }
 
 }
