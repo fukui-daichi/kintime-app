@@ -21,10 +21,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/clock-out', [TimecardController::class, 'clockOut'])->name('timecard.clock-out');
         Route::post('/break-start', [TimecardController::class, 'startBreak'])->name('timecard.break-start');
         Route::post('/break-end', [TimecardController::class, 'endBreak'])->name('timecard.break-end');
-    });
 
-    // 勤怠一覧（月次・ページネーションなし）
-    Route::get('/timecard', [TimecardController::class, 'index'])->name('timecard.index');
+        // 勤怠一覧（月次・ページネーションなし）
+        Route::get('/', [TimecardController::class, 'index'])->name('timecard.index');
+    });
 });
 
 require __DIR__.'/auth.php';

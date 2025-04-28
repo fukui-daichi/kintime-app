@@ -1,4 +1,4 @@
-<main class="p-6 md:ml-64 h-auto pt-20 bg-white dark:bg-gray-800">
+<main class="p-6 md:ml-64 h-auto pt-20 bg-white dark:bg-gray-800 min-h-screen">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
       <!-- 現在時刻表示 -->
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">

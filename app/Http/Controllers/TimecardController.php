@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\TimecardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Helpers\DateHelper;
 
 class TimecardController extends Controller
 {
@@ -80,14 +81,12 @@ class TimecardController extends Controller
             abort(404);
         }
 
-        $now = now();
-        $year = (int)request()->input('year', $now->year);
-        $month = (int)request()->input('month', $now->month);
+        $yearMonth = DateHelper::resolveYearMonth(request());
+        $year = $yearMonth['year'];
+        $month = $yearMonth['month'];
 
         $timecards = $this->timecardService->getTimecardsByMonth($user->id, $year, $month);
-
         $yearOptions = $this->timecardService->getYearOptions($user->id);
-
         $totals = $this->timecardService->calculateMonthlyTotals($timecards);
 
         return view('timecard.index', [
