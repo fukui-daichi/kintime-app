@@ -224,6 +224,32 @@ class TimecardService
     /**
      * ユーザーIDと年月で勤怠データを取得（月内全日分、空欄も含めて返す）
      */
+    public function calculateMonthlyTotals(\Illuminate\Support\Collection $timecards): array
+    {
+        $totals = [
+            'days_worked' => 0,
+            'total_work' => 0,
+            'total_overtime' => 0,
+            'total_night' => 0
+        ];
+
+        foreach ($timecards as $tc) {
+            if ($tc['clock_in'] !== '--:--') {
+                $totals['days_worked']++;
+            }
+            $totals['total_work'] += TimeHelper::timeToMinutes($tc['work_time']);
+            $totals['total_overtime'] += TimeHelper::timeToMinutes($tc['overtime']);
+            $totals['total_night'] += TimeHelper::timeToMinutes($tc['night_work']);
+        }
+
+        return [
+            'days_worked' => $totals['days_worked'],
+            'total_work' => TimeHelper::formatMinutesToTime($totals['total_work']),
+            'total_overtime' => TimeHelper::formatMinutesToTime($totals['total_overtime']),
+            'total_night' => TimeHelper::formatMinutesToTime($totals['total_night'])
+        ];
+    }
+
     public function getTimecardsByMonth(int $userId, int $year, int $month)
     {
         $dateList = \App\Helpers\TimeHelper::getMonthDateList($year, $month);

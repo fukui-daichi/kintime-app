@@ -9,7 +9,21 @@ class TimeHelper
      */
     public static function formatMinutesToTime(int $minutes): string
     {
-        return floor($minutes / 60) . ':' . str_pad($minutes % 60, 2, '0', STR_PAD_LEFT);
+        $hours = floor($minutes / 60);
+        $minutes = $minutes % 60;
+        return sprintf('%02d:%02d', $hours, $minutes);
+    }
+
+    /**
+     * HH:MM形式を分数に変換
+     */
+    public static function timeToMinutes(string $time): int
+    {
+        if ($time === '--:--' || $time === '00:00') {
+            return 0;
+        }
+        list($hours, $minutes) = explode(':', $time);
+        return (int)$hours * 60 + (int)$minutes;
     }
 
     /**

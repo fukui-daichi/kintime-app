@@ -88,12 +88,15 @@ class TimecardController extends Controller
 
         $yearOptions = $this->timecardService->getYearOptions($user->id);
 
+        $totals = $this->timecardService->calculateMonthlyTotals($timecards);
+
         return view('timecard.index', [
             'timecards' => $timecards,
             'user' => $user,
             'year' => $year,
             'month' => $month,
             'yearOptions' => $yearOptions,
+            'totals' => $totals
         ]);
     }
 }

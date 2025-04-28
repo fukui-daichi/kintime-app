@@ -28,9 +28,9 @@
                     </div>
                 </div>
                 <div class="mt-4 overflow-x-auto">
-                    <div class="min-w-[1080px] w-full">
+                    <div class="min-w-[1080px] max-h-[80vh]">
                         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead class="text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                            <thead class="sticky top-0 z-10 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                 <tr>
                                     <th class="px-4 py-3">日付</th>
                                     <th class="px-4 py-3">出勤時間</th>
@@ -66,6 +66,18 @@
                                     </tr>
                                 @endforelse
                             </tbody>
+                            <tfoot class="sticky bottom-0 z-10 bg-gray-100 dark:bg-gray-700 font-bold">
+                                <tr>
+                                    <td class="px-4 py-3">合計</td>
+                                    <td class="px-4 py-3">{{ $totals['days_worked'] }}日</td>
+                                    <td class="px-4 py-3">-</td>
+                                    <td class="px-4 py-3">-</td>
+                                    <td class="px-4 py-3">{{ $totals['total_work'] }}</td>
+                                    <td class="px-4 py-3">{{ $totals['total_overtime'] }}</td>
+                                    <td class="px-4 py-3">{{ $totals['total_night'] }}</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
