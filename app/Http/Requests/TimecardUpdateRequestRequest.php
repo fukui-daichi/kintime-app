@@ -39,19 +39,14 @@ class TimecardUpdateRequestRequest extends FormRequest
 
         return [
             'timecard_id' => $validated['timecard_id'],
-            'original_time' => [
-                'clock_in' => $this->input('clock_in'),
-                'clock_out' => $this->input('clock_out'),
-                'break_start' => $this->input('break_start'),
-                'break_end' => $this->input('break_end')
-            ],
-            'corrected_time' => [
-                'clock_in' => $this->input('clock_in'),
-                'clock_out' => $this->input('clock_out'),
-                'break_start' => $this->input('break_start'),
-                'break_end' => $this->input('break_end')
-            ],
-            'correction_type' => 'all',
+            'original_clock_in' => $this->input('clock_in'),
+            'original_clock_out' => $this->input('clock_out'),
+            'original_break_start' => $this->input('break_start'),
+            'original_break_end' => $this->input('break_end'),
+            'corrected_clock_in' => $this->input('clock_in'),
+            'corrected_clock_out' => $this->input('clock_out'),
+            'corrected_break_start' => $this->input('break_start'),
+            'corrected_break_end' => $this->input('break_end'),
             'reason' => $validated['reason']
         ];
     }

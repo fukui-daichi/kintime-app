@@ -45,12 +45,19 @@ class TimecardUpdateRequestService
      */
     public function buildCreateData(array $validated, User $user): array
     {
+        $timecard = Timecard::find($validated['timecard_id']);
+
         return [
             'user_id' => $user->id,
             'timecard_id' => $validated['timecard_id'],
-            'original_time' => $validated['original_time'],
-            'corrected_time' => $validated['corrected_time'],
-            'correction_type' => $validated['correction_type'],
+            'original_clock_in' => $timecard->clock_in,
+            'original_clock_out' => $timecard->clock_out,
+            'original_break_start' => $timecard->break_start,
+            'original_break_end' => $timecard->break_end,
+            'corrected_clock_in' => $validated['corrected_clock_in'],
+            'corrected_clock_out' => $validated['corrected_clock_out'],
+            'corrected_break_start' => $validated['corrected_break_start'],
+            'corrected_break_end' => $validated['corrected_break_end'],
             'status' => TimecardUpdateRequest::STATUS_PENDING,
             'reason' => $validated['reason']
         ];
