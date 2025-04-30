@@ -84,11 +84,35 @@ class TimecardUpdateRequestService
     }
 
     /**
-     * ユーザーの申請一覧取得
+     * ユーザーの申請一覧取得（フォーマット済みデータ）
      */
     public function getUserRequests(int $userId, int $perPage = 10)
     {
-        return $this->repository->getByUserId($userId, $perPage);
+        $requests = $this->repository->getByUserId($userId, $perPage);
+
+        $requests->getCollection()->transform(function ($request) {
+            return [
+                'id' => $request->id,
+                'created_at' => TimeHelper::formatJapaneseDate($request->created_at),
+                'before' => [
+                    '出勤' => TimeHelper::formatTime($request->original_clock_in),
+                    '退勤' => TimeHelper::formatTime($request->original_clock_out),
+                    '休憩開始' => TimeHelper::formatTime($request->original_break_start),
+                    '休憩終了' => TimeHelper::formatTime($request->original_break_end),
+                ],
+                'after' => [
+                    '出勤' => TimeHelper::formatTime($request->corrected_clock_in),
+                    '退勤' => TimeHelper::formatTime($request->corrected_clock_out),
+                    '休憩開始' => TimeHelper::formatTime($request->corrected_break_start),
+                    '休憩終了' => TimeHelper::formatTime($request->corrected_break_end),
+                ],
+                'status' => $request->status,
+                'approver_name' => $request->approver ? $request->approver->name : '-',
+                'reason' => $request->reason
+            ];
+        });
+
+        return $requests;
     }
 
     /**

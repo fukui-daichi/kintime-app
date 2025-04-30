@@ -22,7 +22,7 @@ class TimecardUpdateRequestController extends Controller
     {
         $user = Auth::user();
         $requests = $this->service->getUserRequests($user->id, 10);
-        return view('timecard.update-requests.index', compact('requests'));
+        return view('timecard.update-requests.index', compact('user', 'requests'));
     }
 
     public function create(Timecard $timecard)
