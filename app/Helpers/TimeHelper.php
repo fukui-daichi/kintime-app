@@ -47,4 +47,21 @@ class TimeHelper
     {
         return $datetime->format($format);
     }
+
+    /**
+     * 時間をフォーマット (nullの場合は'--:--')
+     */
+    public static function formatTime(?\DateTime $time): string
+    {
+        return $time ? $time->format('H:i') : '--:--';
+    }
+
+    /**
+     * 日本語形式で日付をフォーマット
+     */
+    public static function formatJapaneseDate(\DateTime $date): string
+    {
+        $weekday = ['日', '月', '火', '水', '木', '金', '土'][$date->format('w')];
+        return $date->format("Y年m月d日（{$weekday}）");
+    }
 }

@@ -55,9 +55,22 @@
                                         <td class="px-4 py-3">{{ $timecard['night_work'] }}</td>
                                         <td class="px-4 py-3">{{ $timecard['status'] }}</td>
                                         <td class="px-4 py-3">
-                                            <button type="button" class="px-4 py-2 text-sm rounded bg-blue-500 text-white opacity-70 cursor-not-allowed" disabled>
-                                                申請
-                                            </button>
+                                            @if(isset($timecard['id']))
+                                                @if($timecard['can_apply'])
+                                                    <a href="{{ route('timecard-update-requests.create', ['timecard' => $timecard['id']]) }}"
+                                                        class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 transition">
+                                                        申請
+                                                    </a>
+                                                {{-- @else
+                                                    <button type="button" class="px-4 py-2 text-sm rounded bg-gray-400 text-white opacity-70 cursor-not-allowed" disabled>
+                                                        申請不可
+                                                    </button> --}}
+                                                @endif
+                                            {{-- @else
+                                                <button type="button" class="px-4 py-2 text-sm rounded bg-gray-400 text-white opacity-70 cursor-not-allowed" disabled>
+                                                    申請不可
+                                                </button> --}}
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty

@@ -89,6 +89,15 @@ class TimecardController extends Controller
         $yearOptions = $this->timecardService->getYearOptions($user->id);
         $totals = $this->timecardService->calculateMonthlyTotals($timecards);
 
+        // 強制的に配列化
+        $timecards = json_decode(json_encode($timecards), true);
+
+        // 申請可否判定を付与
+        foreach ($timecards as &$timecard) {
+            $timecard['can_apply'] = isset($timecard['id']) && $timecard['id'] ? true : false;
+        }
+        unset($timecard);
+
         return view('timecard.index', [
             'timecards' => $timecards,
             'user' => $user,

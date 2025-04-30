@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TimecardController;
+use App\Http\Controllers\TimecardUpdateRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'index'])
@@ -24,6 +25,14 @@ Route::middleware('auth')->group(function () {
 
         // 勤怠一覧（月次・ページネーションなし）
         Route::get('/', [TimecardController::class, 'index'])->name('timecard.index');
+        // 打刻修正申請関連ルート
+        Route::prefix('update-requests')->group(function () {
+            Route::get('/', [TimecardUpdateRequestController::class, 'index'])->name('timecard-update-requests.index');
+            Route::get('/create/{timecard}', [TimecardUpdateRequestController::class, 'create'])->name('timecard-update-requests.create');
+            Route::post('/', [TimecardUpdateRequestController::class, 'store'])->name('timecard-update-requests.store');
+            Route::get('/{id}', [TimecardUpdateRequestController::class, 'show'])->name('timecard-update-requests.show');
+            Route::post('/{id}/approve', [TimecardUpdateRequestController::class, 'approve'])->name('timecard-update-requests.approve');
+        });
     });
 });
 

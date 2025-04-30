@@ -154,6 +154,7 @@ class TimecardService
     public function formatTimecardForDisplay(Timecard $timecard): array
     {
         return [
+            'id' => $timecard->id,
             'overtime' => TimeHelper::formatMinutesToTime($timecard->overtime_minutes),
             'night_work' => TimeHelper::formatMinutesToTime($timecard->night_minutes),
             'clock_in' => $timecard->clock_in ? TimeHelper::formatDateTime($timecard->clock_in) : '--:--',
