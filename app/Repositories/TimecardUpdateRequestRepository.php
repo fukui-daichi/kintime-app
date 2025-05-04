@@ -10,10 +10,14 @@ class TimecardUpdateRequestRepository
     /**
      * 指定ユーザーの申請一覧を取得（ページネーション付き）
      */
-    public function getByUserId(int $userId, int $perPage = 10)
+    public function getByUserId(int $userId, int $year, int $month, int $perPage = 10)
     {
         return TimecardUpdateRequest::with(['timecard', 'approver'])
             ->where('user_id', $userId)
+            ->whereHas('timecard', function($query) use ($year, $month) {
+                $query->whereYear('date', $year)
+                      ->whereMonth('date', $month);
+            })
             ->latest()
             ->paginate($perPage);
     }

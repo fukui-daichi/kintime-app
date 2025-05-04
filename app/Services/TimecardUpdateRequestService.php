@@ -86,9 +86,9 @@ class TimecardUpdateRequestService
     /**
      * ユーザーの申請一覧取得（フォーマット済みデータ）
      */
-    public function getUserRequests(int $userId, int $perPage = 10)
+    public function getUserRequests(int $userId, int $year, int $month, int $perPage = 10)
     {
-        $requests = $this->repository->getByUserId($userId, $perPage);
+        $requests = $this->repository->getByUserId($userId, $year, $month, $perPage);
 
         $requests->getCollection()->transform(function ($request) {
             return [

@@ -7,7 +7,7 @@
             <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg">
                 <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
                     <div class="w-full md:w-1/2">
-                        <form method="get" action="{{ route('timecard.index') }}" class="flex items-center space-x-2">
+                        <form method="get" action="{{ route('timecard.index') }}" class="flex items-center gap-x-2">
                             <label for="year" class="sr-only">年選択</label>
                             <select name="year" id="year"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
