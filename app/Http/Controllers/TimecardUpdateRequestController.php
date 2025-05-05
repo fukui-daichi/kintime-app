@@ -20,12 +20,9 @@ class TimecardUpdateRequestController extends Controller
 
     public function index(Request $request)
     {
-        $user = Auth::user();
-        $year = $request->input('year', now()->year);
-        $month = $request->input('month', now()->month);
-        $requests = $this->service->getUserRequests($user->id, $year, $month, 10);
-        $yearOptions = range(now()->year - 2, now()->year + 1);
-        return view('timecard.update-requests.index', compact('user', 'requests', 'year', 'month', 'yearOptions'));
+        return view('timecard.update-requests.index',
+            $this->service->getRequestData(Auth::user(), $request)
+        );
     }
 
     public function create(Timecard $timecard)

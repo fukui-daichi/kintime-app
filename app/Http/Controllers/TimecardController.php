@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\TimecardService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\DateHelper;
 
@@ -81,30 +80,8 @@ class TimecardController extends Controller
             abort(404);
         }
 
-        $yearMonth = DateHelper::resolveYearMonth(request());
-        $year = $yearMonth['year'];
-        $month = $yearMonth['month'];
-
-        $timecards = $this->timecardService->getTimecardsByMonth($user->id, $year, $month);
-        $yearOptions = $this->timecardService->getYearOptions($user->id);
-        $totals = $this->timecardService->calculateMonthlyTotals($timecards);
-
-        // 強制的に配列化
-        $timecards = json_decode(json_encode($timecards), true);
-
-        // 申請可否判定を付与
-        foreach ($timecards as &$timecard) {
-            $timecard['can_apply'] = isset($timecard['id']) && $timecard['id'] ? true : false;
-        }
-        unset($timecard);
-
-        return view('timecard.index', [
-            'timecards' => $timecards,
-            'user' => $user,
-            'year' => $year,
-            'month' => $month,
-            'yearOptions' => $yearOptions,
-            'totals' => $totals
-        ]);
+        return view('timecard.index',
+            $this->timecardService->getTimecardData($user, request())
+        );
     }
 }

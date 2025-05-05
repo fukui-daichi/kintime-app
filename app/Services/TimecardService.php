@@ -6,7 +6,9 @@ use App\Models\Timecard;
 use App\Models\User;
 use App\Repositories\TimecardRepository;
 use App\Constants\WorkTimeConstants;
+use App\Helpers\DateHelper;
 use App\Helpers\TimeHelper;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class TimecardService
@@ -26,6 +28,31 @@ class TimecardService
     public function getTodayTimecard(int $userId): ?Timecard
     {
         return $this->repository->getTodayTimecard($userId);
+    }
+
+    /**
+     * 勤怠一覧表示用データを取得
+     */
+    public function getTimecardData(User $user, Request $request): array
+    {
+        $yearMonth = DateHelper::resolveYearMonth($request);
+        $timecards = $this->getTimecardsByMonth($user->id, $yearMonth['year'], $yearMonth['month']);
+
+        $timecardsArray = $timecards->toArray();
+
+        // 申請可否判定を付与
+        foreach ($timecardsArray as &$timecard) {
+            $timecard['can_apply'] = isset($timecard['id']) && $timecard['id'] ? true : false;
+        }
+
+        return [
+            'timecards' => $timecardsArray,
+            'yearOptions' => $this->getYearOptions($user->id),
+            'totals' => $this->calculateMonthlyTotals($timecardsArray),
+            'year' => $yearMonth['year'],
+            'month' => $yearMonth['month'],
+            'user' => $user
+        ];
     }
 
     /**
@@ -199,9 +226,9 @@ class TimecardService
     }
 
     /**
-     * 月間合計を計算
+     * 月間合計を計算（配列対応版）
      */
-    public function calculateMonthlyTotals(\Illuminate\Support\Collection $timecards): array
+    public function calculateMonthlyTotals(array $timecards): array
     {
         $totals = [
             'days_worked' => 0,
