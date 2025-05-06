@@ -3,7 +3,11 @@
       <!-- 現在時刻表示 -->
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
         <h3 class="text-lg font-semibold mb-2 dark:text-white">現在時刻</h3>
-        <div id="current-time" class="text-2xl font-bold dark:text-white">00:00:00</div>
+        <div id="current-date"
+             data-initial-date="{{ $currentDate }}"
+             class="text-lg dark:text-white mb-1">
+        </div>
+        <div id="current-time" class="text-2xl font-bold dark:text-white"></div>
       </div>
 
       <!-- 勤怠状態とボタン -->
@@ -96,17 +100,26 @@
 </main>
 
 <script>
-    function updateCurrentTime() {
+    const updateCurrentDateTime = () => {
         const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        document.getElementById('current-time').textContent = `${hours}:${minutes}:${seconds}`;
-    }
+        const dateElement = document.getElementById('current-date');
+        const timeElement = document.getElementById('current-time');
 
-    // 初期表示
-    updateCurrentTime();
+        // 日付が変わった場合のみ更新
+        if (dateElement.textContent !== dateElement.dataset.initialDate) {
+            dateElement.textContent = dateElement.dataset.initialDate;
+        }
 
-    // 1秒ごとに更新
-    setInterval(updateCurrentTime, 1000);
+        // 時刻は常に更新
+        timeElement.textContent = now.toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+    };
+
+    // 初期表示と1秒ごとの更新
+    updateCurrentDateTime();
+    setInterval(updateCurrentDateTime, 1000);
 </script>

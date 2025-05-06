@@ -9,5 +9,6 @@
     <x-dashboard.user.main-content
         :user="$user"
         :timecardButtonStatus="$timecardButtonStatus"
-        :timecard="$timecard" />
+        :timecard="$timecard"
+        :currentDate="$currentDate" />
 </x-app-layout>

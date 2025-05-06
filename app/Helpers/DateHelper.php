@@ -40,4 +40,12 @@ class DateHelper
     {
         return ($year >= 2000 && $year <= 2100) && ($month >= 1 && $month <= 12);
     }
+
+    /**
+     * 日本語形式の日付文字列を取得（例: 2025年5月6日（月））
+     */
+    public static function getJapaneseDateString(Carbon $date = null): string
+    {
+        return ($date ?? now())->locale('ja')->isoFormat('YYYY年M月D日（ddd）');
+    }
 }
