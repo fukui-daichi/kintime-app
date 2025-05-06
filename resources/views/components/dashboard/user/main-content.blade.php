@@ -2,7 +2,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
       <!-- 現在時刻表示 -->
       <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
-        <h3 class="text-lg font-semibold mb-2 dark:text-white">現在時刻</h3>
+        <h3 class="text-lg font-semibold mb-2 dark:text-white">現在日時</h3>
         <div id="current-date"
              data-initial-date="{{ $currentDate }}"
              class="text-lg dark:text-white mb-1">
