@@ -90,65 +90,44 @@ class DatabaseSeeder extends Seeder
             'joined_at' => '2022-04-01'
         ]);
 
-        // 一般ユーザーと上長ユーザーに対して直近180日分のタイムカードを生成
+        // 一般ユーザーと上長ユーザーに対して直近180日分のタイムカードを生成（本日は含まない）
         $users = User::where('role', '!=', 'admin')->get();
-        $today = now();
-        $startDate = $today->copy()->subDays(180);
+        $yesterday = now()->subDay();
+        $startDate = $yesterday->copy()->subDays(180);
 
         foreach ($users as $user) {
             $currentDate = $startDate->copy();
+            $workDays = collect();
 
-            while ($currentDate <= $today) {
+            // まず勤務日リストを作成
+            while ($currentDate <= $yesterday) {
                 if (!$currentDate->isWeekend()) {
-                    // 出勤時間（9時〜15時の間でランダム）
-                    $clockInHour = rand(9, 15);
-                    $clockIn = $currentDate->copy()->setTime($clockInHour, rand(0, 59), 0);
-
-                    // 退勤時間（出勤時間 + 8時間以上、最大23時まで）
-                    $minClockOut = $clockIn->copy()->addHours(8);
-                    $maxClockOut = $currentDate->copy()->setTime(23, 59, 59);
-                    $clockOut = $minClockOut->addMinutes(rand(0, $maxClockOut->diffInMinutes($minClockOut)));
-
-                    // 休憩時間（1時間）
-                    $breakStart = $clockIn->copy()->addHours(rand(1, 6));
-                    $breakEnd = $breakStart->copy()->addHours(1);
-
-                    // ユーザーごとに異なる勤務パターンを割り当て
-                    if ($user->id % 4 === 0) {
-                        // 通常勤務（残業なし）
-                        Timecard::factory()->create([
-                            'user_id' => $user->id,
-                            'date' => $currentDate,
-                            'clock_in' => $clockIn,
-                            'clock_out' => $clockOut,
-                            'break_start' => $breakStart,
-                            'break_end' => $breakEnd,
-                            'status' => 'approved'
-                        ]);
-                    } elseif ($user->id % 4 === 1) {
-                        // 残業あり
-                        Timecard::factory()->withOvertime()->create([
-                            'user_id' => $user->id,
-                            'date' => $currentDate,
-                            'status' => 'approved'
-                        ]);
-                    } elseif ($user->id % 4 === 2) {
-                        // 深夜勤務あり
-                        Timecard::factory()->withNightWork()->create([
-                            'user_id' => $user->id,
-                            'date' => $currentDate,
-                            'status' => 'approved'
-                        ]);
-                    } else {
-                        // 深夜勤務+残業あり
-                        Timecard::factory()->withOvertimeAndNightWork()->create([
-                            'user_id' => $user->id,
-                            'date' => $currentDate,
-                            'status' => 'approved'
-                        ]);
-                    }
+                    $workDays->push($currentDate->copy());
                 }
                 $currentDate->addDay();
+            }
+
+            // 勤務日を半分に分割
+            $half = (int)($workDays->count() / 2);
+            $dayCount = 0;
+
+            foreach ($workDays as $workDate) {
+                $dayCount++;
+                if ($dayCount <= $half) {
+                    // 前半は通常勤務
+                    Timecard::factory()->standardWork()->create([
+                        'user_id' => $user->id,
+                        'date' => $workDate,
+                        'status' => 'approved'
+                    ]);
+                } else {
+                    // 後半は残業あり
+                    Timecard::factory()->withOvertime()->create([
+                        'user_id' => $user->id,
+                        'date' => $workDate,
+                        'status' => 'approved'
+                    ]);
+                }
             }
         }
     }
