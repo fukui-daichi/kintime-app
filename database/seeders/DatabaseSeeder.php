@@ -11,7 +11,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             DepartmentSeeder::class,
             UserSeeder::class,
-            TimecardSeeder::class
+            TimecardSeeder::class,
+            TimecardUpdateRequestSeeder::class
         ]);
     }
 }
