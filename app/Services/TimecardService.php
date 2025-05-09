@@ -66,14 +66,14 @@ class TimecardService
         });
 
         $result = [];
-        foreach ($dateList as $md) {
-            if (isset($timecards[$md])) {
-                $result[] = $this->formatTimecardForDisplay($timecards[$md]);
-            } else {
-                $date = Carbon::createFromFormat('m-d', $md);
-                $result[] = $this->formatEmptyTimecardForDisplay($date);
-            }
-        }
+foreach ($dateList as $md) {
+    if (isset($timecards[$md])) {
+        $result[] = $this->formatTimecardForDisplay($timecards[$md]);
+    } else {
+        $date = Carbon::createFromFormat('Y-m-d', $year . '-' . $md);
+        $result[] = $this->formatEmptyTimecardForDisplay($date);
+    }
+}
         return collect($result);
     }
 
