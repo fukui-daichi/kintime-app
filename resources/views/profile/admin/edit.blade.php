@@ -9,12 +9,8 @@
                     <section>
                         <header>
                             <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                {{ __('Profile Information') }}
+                                基本情報
                             </h2>
-
-                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                {{ __("Update your account's profile information and email address.") }}
-                            </p>
                         </header>
 
                         <form id="send-verification" method="post" action="{{ route('verification.send') }}">
@@ -46,27 +42,27 @@
 
                             <div>
                                 <x-input-label for="department_id" :value="__('部署')" />
-                                <select id="department_id" name="department_id" class="mt-1 block w-full">
+                                <x-select id="department_id" name="department_id">
                                     <option value="">選択してください</option>
                                     @foreach($departments as $department)
                                         <option value="{{ $department->id }}" @selected(old('department_id', $user->department_id) == $department->id)>
                                             {{ $department->name }}
                                         </option>
                                     @endforeach
-                                </select>
+                                </x-select>
                                 <x-input-error class="mt-2" :messages="$errors->get('department_id')" />
                             </div>
 
                             <div>
                                 <x-input-label for="employment_type" :value="__('雇用形態')" />
-                                <select id="employment_type" name="employment_type" class="mt-1 block w-full">
+                                <x-select id="employment_type" name="employment_type">
                                     <option value="">選択してください</option>
                                     @foreach($employmentTypes as $type)
                                         <option value="{{ $type }}" @selected(old('employment_type', $user->employment_type) == $type)>
                                             {{ $type }}
                                         </option>
                                     @endforeach
-                                </select>
+                                </x-select>
                                 <x-input-error class="mt-2" :messages="$errors->get('employment_type')" />
                             </div>
 
@@ -87,7 +83,7 @@
                             </div>
 
                             <div>
-                                <x-input-label for="email" :value="__('Email')" />
+                                <x-input-label for="email" :value="__('メールアドレス')" />
                                 <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
                                 <x-input-error class="mt-2" :messages="$errors->get('email')" />
 
@@ -133,12 +129,8 @@
                     <section>
                         <header>
                             <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                {{ __('Update Password') }}
+                                パスワード再設定
                             </h2>
-
-                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                {{ __('Ensure your account is using a long, random password to stay secure.') }}
-                            </p>
                         </header>
 
                         <form method="post" action="{{ route('password.update') }}" class="mt-6 space-y-6">
@@ -146,19 +138,19 @@
                             @method('put')
 
                             <div>
-                                <x-input-label for="update_password_current_password" :value="__('Current Password')" />
+                                <x-input-label for="update_password_current_password" :value="__('現在のパスワード')" />
                                 <x-text-input id="update_password_current_password" name="current_password" type="password" class="mt-1 block w-full" autocomplete="current-password" />
                                 <x-input-error :messages="$errors->updatePassword->get('current_password')" class="mt-2" />
                             </div>
 
                             <div>
-                                <x-input-label for="update_password_password" :value="__('New Password')" />
+                                <x-input-label for="update_password_password" :value="__('新しいパスワード')" />
                                 <x-text-input id="update_password_password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" />
                                 <x-input-error :messages="$errors->updatePassword->get('password')" class="mt-2" />
                             </div>
 
                             <div>
-                                <x-input-label for="update_password_password_confirmation" :value="__('Confirm Password')" />
+                                <x-input-label for="update_password_password_confirmation" :value="__('確認用パスワード')" />
                                 <x-text-input id="update_password_password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" autocomplete="new-password" />
                                 <x-input-error :messages="$errors->updatePassword->get('password_confirmation')" class="mt-2" />
                             </div>
@@ -186,18 +178,18 @@
                     <section class="space-y-6">
                         <header>
                             <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                {{ __('Delete Account') }}
+                                アカウント削除
                             </h2>
 
                             <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.') }}
+                                アカウントを削除すると、すべてのデータが永久に削除されます。削除する前に、保持したいデータをダウンロードしてください。
                             </p>
                         </header>
 
                         <x-danger-button
                             x-data=""
                             x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
-                        >{{ __('Delete Account') }}</x-danger-button>
+                        >アカウントを削除</x-danger-button>
 
                         <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
                             <form method="post" action="{{ route('profile.destroy') }}" class="p-6">
@@ -205,22 +197,22 @@
                                 @method('delete')
 
                                 <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                    {{ __('Are you sure you want to delete your account?') }}
+                                    本当にアカウントを削除しますか？
                                 </h2>
 
                                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                    {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+                                    アカウントを削除すると、すべてのデータが永久に削除されます。削除を実行するにはパスワードを入力してください。
                                 </p>
 
                                 <div class="mt-6">
-                                    <x-input-label for="password" value="{{ __('Password') }}" class="sr-only" />
+                                    <x-input-label for="password" value="パスワード" class="sr-only" />
 
                                     <x-text-input
                                         id="password"
                                         name="password"
                                         type="password"
                                         class="mt-1 block w-3/4"
-                                        placeholder="{{ __('Password') }}"
+                                        placeholder="パスワード"
                                     />
 
                                     <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2" />
@@ -228,11 +220,11 @@
 
                                 <div class="mt-6 flex justify-end">
                                     <x-secondary-button x-on:click="$dispatch('close')">
-                                        {{ __('Cancel') }}
+                                        キャンセル
                                     </x-secondary-button>
 
                                     <x-danger-button class="ms-3">
-                                        {{ __('Delete Account') }}
+                                        アカウントを削除
                                     </x-danger-button>
                                 </div>
                             </form>
