@@ -36,27 +36,22 @@ class ProfileController extends Controller
             Log::info('ProfileController@update request', [
                 'ajax' => $request->ajax(),
                 'wantsJson' => $request->wantsJson(),
-                'headers' => $request->headers->all(),
-                'contentType' => $request->getContentType(),
                 'isJson' => $request->isJson()
             ]);
 
-            // JSONリクエストを明示的に処理
-            if ($request->isJson()) {
-                $data = $request->json()->all();
-                $request->merge($data);
-            }
-
             // リクエストデータ確認
-            Log::debug('Profile update request data:', $request->all());
+            Log::debug('Raw request data:', $request->all());
             file_put_contents(storage_path('logs/profile_debug.log'),
                 print_r($request->all(), true), FILE_APPEND);
 
-            $user = $request->user();
-            $changes = $request->validated();
-            Log::debug('Validated changes:', $changes);
+            // バリデーションデータ確認
+            $validatedData = $request->validated();
+            Log::debug('Validated data:', $validatedData);
+            file_put_contents(storage_path('logs/profile_validated.log'),
+                print_r($validatedData, true), FILE_APPEND);
 
-            $user->fill($changes);
+            $user = $request->user();
+            $user->fill($validatedData);
             Log::debug('User dirty attributes:', $user->getDirty());
 
             if ($user->isDirty('email')) {
