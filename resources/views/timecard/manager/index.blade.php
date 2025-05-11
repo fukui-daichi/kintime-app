@@ -9,21 +9,17 @@
                     <div class="w-full md:w-1/2">
                         <form method="get" action="{{ route('timecard.index') }}" class="flex items-center gap-x-2">
                             <label for="year" class="sr-only">年選択</label>
-                            <select name="year" id="year"
-                                class="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                onchange="this.form.submit()">
+                            <x-select name="year" id="year" onchange="this.form.submit()">
                                 @foreach ($yearOptions as $y)
                                     <option value="{{ $y }}" @if($y == $year) selected @endif>{{ $y }}</option>
                                 @endforeach
-                            </select>
+                            </x-select>
                             <label for="month" class="sr-only">月選択</label>
-                            <select name="month" id="month"
-                                class="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                onchange="this.form.submit()">
+                            <x-select name="month" id="month" onchange="this.form.submit()">
                                 @for ($m = 1; $m <= 12; $m++)
                                     <option value="{{ $m }}" @if($m == $month) selected @endif>{{ $m }}</option>
                                 @endfor
-                            </select>
+                            </x-select>
                         </form>
                     </div>
                 </div>
@@ -40,7 +36,7 @@
                                     <th class="px-4 py-3">残業時間</th>
                                     <th class="px-4 py-3">深夜残業時間</th>
                                     <th class="px-4 py-3">状態</th>
-                                    <th class="px-4 py-3">申請</th>
+                                    <th class="px-4 py-3">編集</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -59,7 +55,7 @@
                                                 @if($timecard['can_apply'])
                                                     <a href="{{ route('timecard-update-requests.create', ['timecard' => $timecard['id']]) }}"
                                                         class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 transition">
-                                                        申請
+                                                        編集
                                                     </a>
                                                 {{-- @else
                                                     <button type="button" class="px-4 py-2 text-sm rounded bg-gray-400 text-white opacity-70 cursor-not-allowed" disabled>
