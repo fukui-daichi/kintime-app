@@ -8,7 +8,8 @@
         <li>
         <a
             href="{{ route('dashboard') }}"
-            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            class="flex items-center p-2 text-base font-medium rounded-lg group
+                {{ request()->routeIs('dashboard') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white' }}"
         >
             <svg
             aria-hidden="true"
@@ -24,11 +25,30 @@
         </a>
         </li>
         <li>
+        <a
+            href="{{ route('timecard.index') }}"
+            class="flex items-center p-2 text-base font-medium rounded-lg group
+                {{ request()->routeIs('timecard.index') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white' }}"
+        >
+            <svg
+            aria-hidden="true"
+            class="w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
+            >
+            <path fill-rule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-3">勤怠一覧</span>
+        </a>
+        </li>
+        <li>
         <button
             type="button"
             class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
             aria-controls="dropdown-pages"
             data-collapse-toggle="dropdown-pages"
+            aria-expanded="true"
         >
             <svg
             aria-hidden="true"
@@ -44,7 +64,7 @@
             ></path>
             </svg>
             <span class="flex-1 ml-3 text-left whitespace-nowrap"
-            >Pages</span
+            >申請一覧</span
             >
             <svg
             aria-hidden="true"
@@ -60,176 +80,27 @@
             ></path>
             </svg>
         </button>
-        <ul id="dropdown-pages" class="hidden py-2 space-y-2">
+        <ul id="dropdown-pages" class="py-2 space-y-2">
             <li>
             <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Settings</a
-            >
+                href="{{ route('timecard-update-requests.index') }}"
+                class="flex items-center p-2 pl-11 w-full text-base font-medium rounded-lg transition duration-75 group
+                    {{ request()->routeIs('timecard-update-requests.index') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white' }}"
+                >勤怠修正
+                <span class="ml-auto inline-flex justify-center items-center w-5 h-5 text-xs font-semibold rounded-full text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-900">
+                    0
+                </span>
+            </a>
             </li>
             <li>
             <a
                 href="#"
                 class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Kanban</a
-            >
-            </li>
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Calendar</a
-            >
-            </li>
-        </ul>
-        </li>
-        <li>
-        <button
-            type="button"
-            class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-            aria-controls="dropdown-sales"
-            data-collapse-toggle="dropdown-sales"
-        >
-            <svg
-            aria-hidden="true"
-            class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-            >
-            <path
-                fill-rule="evenodd"
-                d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"
-                clip-rule="evenodd"
-            ></path>
-            </svg>
-            <span class="flex-1 ml-3 text-left whitespace-nowrap"
-            >Sales</span
-            >
-            <svg
-            aria-hidden="true"
-            class="w-6 h-6"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-            >
-            <path
-                fill-rule="evenodd"
-                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-            ></path>
-            </svg>
-        </button>
-        <ul id="dropdown-sales" class="hidden py-2 space-y-2">
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Products</a
-            >
-            </li>
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Billing</a
-            >
-            </li>
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Invoice</a
-            >
-            </li>
-        </ul>
-        </li>
-        <li>
-        <a
-            href="#"
-            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-        >
-            <svg
-            aria-hidden="true"
-            class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-            >
-            <path
-                d="M8.707 7.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414L11 7.586V3a1 1 0 10-2 0v4.586l-.293-.293z"
-            ></path>
-            <path
-                d="M3 5a2 2 0 012-2h1a1 1 0 010 2H5v7h2l1 2h4l1-2h2V5h-1a1 1 0 110-2h1a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"
-            ></path>
-            </svg>
-            <span class="flex-1 ml-3 whitespace-nowrap">Messages</span>
-            <span
-            class="inline-flex justify-center items-center w-5 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800"
-            >
-            4
-            </span>
-        </a>
-        </li>
-        <li>
-        <button
-            type="button"
-            class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-            aria-controls="dropdown-authentication"
-            data-collapse-toggle="dropdown-authentication"
-        >
-            <svg
-            aria-hidden="true"
-            class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-            >
-            <path
-                fill-rule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clip-rule="evenodd"
-            ></path>
-            </svg>
-            <span class="flex-1 ml-3 text-left whitespace-nowrap"
-            >Authentication</span
-            >
-            <svg
-            aria-hidden="true"
-            class="w-6 h-6"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-            >
-            <path
-                fill-rule="evenodd"
-                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-            ></path>
-            </svg>
-        </button>
-        <ul id="dropdown-authentication" class="hidden py-2 space-y-2">
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Sign In</a
-            >
-            </li>
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Sign Up</a
-            >
-            </li>
-            <li>
-            <a
-                href="#"
-                class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                >Forgot Password</a
-            >
+                >有給休暇
+                <span class="ml-auto inline-flex justify-center items-center w-5 h-5 text-xs font-semibold rounded-full text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-900">
+                    0
+                </span>
+            </a>
             </li>
         </ul>
         </li>
@@ -239,7 +110,7 @@
     >
         <li>
         <a
-            href="#"
+            href="{{ route('profile.edit') }}"
             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group"
         >
             <svg
@@ -249,59 +120,34 @@
             viewBox="0 0 20 20"
             xmlns="http://www.w3.org/2000/svg"
             >
-            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-            <path
-                fill-rule="evenodd"
-                d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                clip-rule="evenodd"
-            ></path>
+            <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path>
             </svg>
-            <span class="ml-3">Docs</span>
+            <span class="ml-3">プロフィール</span>
         </a>
         </li>
         <li>
-        <a
-            href="#"
-            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group"
-        >
-            <svg
-            aria-hidden="true"
-            class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button
+                type="submit"
+                class="flex items-center w-full p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group"
             >
-            <path
-                d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"
-            ></path>
-            </svg>
-            <span class="ml-3">Components</span>
-        </a>
-        </li>
-        <li>
-        <a
-            href="#"
-            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group"
-        >
-            <svg
-            aria-hidden="true"
-            class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-            >
-            <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0c0 .993-.241 1.929-.668 2.754l-1.524-1.525a3.997 3.997 0 00.078-2.183l1.562-1.562C15.802 8.249 16 9.1 16 10zm-5.165 3.913l1.58 1.58A5.98 5.98 0 0110 16a5.976 5.976 0 01-2.516-.552l1.562-1.562a4.006 4.006 0 001.789.027zm-4.677-2.796a4.002 4.002 0 01-.041-2.08l-.08.08-1.53-1.533A5.98 5.98 0 004 10c0 .954.223 1.856.619 2.657l1.54-1.54zm1.088-6.45A5.974 5.974 0 0110 4c.954 0 1.856.223 2.657.619l-1.54 1.54a4.002 4.002 0 00-2.346.033L7.246 4.668zM12 10a2 2 0 11-4 0 2 2 0 014 0z"
-                clip-rule="evenodd"
-            ></path>
-            </svg>
-            <span class="ml-3">Help</span>
-        </a>
+                <svg
+                aria-hidden="true"
+                class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+                >
+                <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="ml-3">ログアウト</span>
+            </button>
+        </form>
         </li>
     </ul>
     </div>
-    <div
+    {{-- <div
     class="hidden absolute bottom-0 left-0 justify-center p-4 space-x-4 w-full lg:flex bg-white dark:bg-gray-800 z-20"
     >
     <a
@@ -347,5 +193,5 @@
         Settings page
         <div class="tooltip-arrow" data-popper-arrow></div>
     </div>
-    </div>
+    </div> --}}
 </aside>
