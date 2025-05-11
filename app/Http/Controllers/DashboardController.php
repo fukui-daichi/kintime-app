@@ -37,25 +37,11 @@ class DashboardController extends Controller
             case 'manager':
                 return view('dashboard.manager.index', compact('user'));
             default:
-                $timecardButtonStatus = $this->timecardService->getTimecardButtonStatus($user->id);
-                $todayTimecard = $this->timecardService->getTodayTimecard($user->id);
-
-                $timecardData = $todayTimecard
-                    ? $this->timecardService->formatTimecardForDisplay($todayTimecard)
-                    : null;
-
-                $pendingRequests = $this->timecardUpdateRequestService
-                    ->getPendingRequestsForDashboard($user->id);
-
-                return view('dashboard.user.index', [
-                    'user' => $user,
-                    'timecardButtonStatus' => $timecardButtonStatus,
-                    'timecard' => $todayTimecard
-                        ? $this->timecardService->formatTimecardForDisplay($todayTimecard)
-                        : null,
-                    'currentDate' => DateHelper::getJapaneseDateString(),
-                    'pendingRequests' => $pendingRequests
-                ]);
+                $dashboardData = $this->timecardService->getDashboardData($user);
+                return view('dashboard.user.index', array_merge(
+                    ['user' => $user],
+                    $dashboardData
+                ));
         }
     }
 }

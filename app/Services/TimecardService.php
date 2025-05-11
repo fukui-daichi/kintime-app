@@ -226,6 +226,21 @@ foreach ($dateList as $md) {
     }
 
     /**
+     * ダッシュボード表示用データを取得
+     */
+    public function getDashboardData(User $user): array
+    {
+        $timecard = $this->getTodayTimecard($user->id);
+        return [
+            'timecardButtonStatus' => $this->getTimecardButtonStatus($user->id),
+            'timecard' => $timecard ? $this->formatTimecardForDisplay($timecard) : null,
+            'currentDate' => DateHelper::getJapaneseDateString(),
+            'pendingRequests' => app(TimecardUpdateRequestService::class)
+                ->getPendingRequestsForDashboard($user->id)
+        ];
+    }
+
+    /**
      * 月間合計を計算（配列対応版）
      */
     public function calculateMonthlyTotals(array $timecards): array
