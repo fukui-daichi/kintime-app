@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Services\TimecardService;
 use App\Services\TimecardUpdateRequestService;
-use App\Helpers\DateHelper;
 
 class DashboardController extends Controller
 {
@@ -35,7 +34,11 @@ class DashboardController extends Controller
             case 'admin':
                 return view('dashboard.admin.index', compact('user'));
             case 'manager':
-                return view('dashboard.manager.index', compact('user'));
+                $dashboardData = $this->timecardService->getDashboardData($user);
+                return view('dashboard.manager.index', array_merge(
+                    ['user' => $user],
+                    $dashboardData
+                ));
             default:
                 $dashboardData = $this->timecardService->getDashboardData($user);
                 return view('dashboard.user.index', array_merge(
