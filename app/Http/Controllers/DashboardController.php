@@ -6,15 +6,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Services\TimecardService;
+use App\Services\TimecardUpdateRequestService;
 use App\Helpers\DateHelper;
 
 class DashboardController extends Controller
 {
     protected $timecardService;
+    protected $timecardUpdateRequestService;
 
-    public function __construct(TimecardService $timecardService)
-    {
+    public function __construct(
+        TimecardService $timecardService,
+        TimecardUpdateRequestService $timecardUpdateRequestService
+    ) {
         $this->timecardService = $timecardService;
+        $this->timecardUpdateRequestService = $timecardUpdateRequestService;
     }
 
     public function index()
@@ -39,13 +44,17 @@ class DashboardController extends Controller
                     ? $this->timecardService->formatTimecardForDisplay($todayTimecard)
                     : null;
 
+                $pendingRequests = $this->timecardUpdateRequestService
+                    ->getPendingRequestsForDashboard($user->id);
+
                 return view('dashboard.user.index', [
                     'user' => $user,
                     'timecardButtonStatus' => $timecardButtonStatus,
                     'timecard' => $todayTimecard
                         ? $this->timecardService->formatTimecardForDisplay($todayTimecard)
                         : null,
-                    'currentDate' => DateHelper::getJapaneseDateString()
+                    'currentDate' => DateHelper::getJapaneseDateString(),
+                    'pendingRequests' => $pendingRequests
                 ]);
         }
     }

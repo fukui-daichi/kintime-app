@@ -18,6 +18,35 @@ class TimecardUpdateRequestService
     }
 
     /**
+     * ダッシュボード表示用の未承認申請を取得
+     */
+    public function getPendingRequestsForDashboard(int $userId, int $limit = 5)
+    {
+        return TimecardUpdateRequest::where('user_id', $userId)
+            ->pending()
+            ->latest()
+            ->limit($limit)
+            ->get()
+            ->map(function ($request) {
+                return [
+                    'created_at' => $request->created_at->format('Y/m/d'),
+                    'reason' => $request->reason,
+                    'status' => $this->getStatusText($request->status)
+                ];
+            });
+    }
+
+    private function getStatusText(string $status): string
+    {
+        return match($status) {
+            TimecardUpdateRequest::STATUS_PENDING => '承認待ち',
+            TimecardUpdateRequest::STATUS_APPROVED => '承認済み',
+            TimecardUpdateRequest::STATUS_REJECTED => '却下',
+            default => $status
+        };
+    }
+
+    /**
      * 申請作成処理
      */
     public function createRequest(array $validated, User $user): TimecardUpdateRequest
