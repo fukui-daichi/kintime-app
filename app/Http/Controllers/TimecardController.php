@@ -76,12 +76,13 @@ class TimecardController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($user->isAdmin()) {
-            abort(404);
+        switch ($user->getUserType()) {
+            case 'admin':
+                abort(404);
+            case 'manager':
+                return view('timecard.manager.index', $this->timecardService->getTimecardData($user, request()));
+            default:
+                return view('timecard.user.index', $this->timecardService->getTimecardData($user, request()));
         }
-
-        return view('timecard.index',
-            $this->timecardService->getTimecardData($user, request())
-        );
     }
 }

@@ -26,10 +26,6 @@ class DashboardController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        if (!$user) {
-            return redirect('/login');
-        }
-
         switch ($user->getUserType()) {
             case 'admin':
                 return view('dashboard.admin.index', compact('user'));
