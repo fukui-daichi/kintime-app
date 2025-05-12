@@ -53,10 +53,12 @@
                                         <td class="px-4 py-3">
                                             @if(isset($timecard['id']))
                                                 @if($timecard['can_apply'])
-                                                    <a href="{{ route('timecard-update-requests.create', ['timecard' => $timecard['id']]) }}"
-                                                        class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 transition">
+                                                    <x-primary-button
+                                                        tag="a"
+                                                        href="{{ route('timecard-update-requests.create', ['timecard' => $timecard['id']]) }}"
+                                                        class="text-sm">
                                                         申請
-                                                    </a>
+                                                    </x-primary-button>
                                                 {{-- @else
                                                     <button type="button" class="px-4 py-2 text-sm rounded bg-gray-400 text-white opacity-70 cursor-not-allowed" disabled>
                                                         申請不可

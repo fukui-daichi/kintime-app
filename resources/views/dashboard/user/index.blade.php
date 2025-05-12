@@ -97,7 +97,12 @@
                 <div class="text-gray-500 dark:text-gray-400">現在、打刻修正申請はありません</div>
               @endforelse
               <div class="text-right">
-                <a href="{{ route('timecard-update-requests.index') }}" class="text-blue-500 hover:underline text-sm">一覧を見る</a>
+                <x-primary-button
+                    tag="a"
+                    href="{{ route('timecard-update-requests.index') }}"
+                    class="text-sm">
+                    一覧を見る
+                </x-primary-button>
               </div>
             </div>
           </div>
