@@ -2,8 +2,8 @@
     <x-header :user="$user" />
     <x-user.sidebar />
 
-    <main class="p-6 md:ml-64 min-h-screen h-auto pt-20 bg-white dark:bg-gray-800">
-        <div class="mx-auto max-w-screen-xl">
+    <x-main-content>
+        <div class="max-w-screen-xl">
             <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg">
                 <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
                     <div class="w-full md:w-1/2">
@@ -94,5 +94,5 @@
                 </div>
             </div>
         </div>
-    </main>
+    </x-main-content>
 </x-app-layout>

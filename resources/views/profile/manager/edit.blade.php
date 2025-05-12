@@ -2,9 +2,9 @@
     <x-header :user="$user" />
     <x-manager.sidebar />
 
-    <main class="p-6 md:ml-64 min-h-screen h-auto pt-20 bg-white dark:bg-gray-800">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <x-main-content>
+        <div class="max-w-7xl space-y-16">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     <section>
                         <header>
@@ -124,7 +124,7 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     <section>
                         <header>
@@ -173,7 +173,7 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     <section class="space-y-6">
                         <header>
@@ -233,5 +233,5 @@
                 </div>
             </div>
         </div>
-    </main>
+    </x-main-content>
 </x-app-layout>

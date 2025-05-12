@@ -2,34 +2,30 @@
     <x-header :user="$user" />
     <x-user.sidebar />
 
-    <main class="p-6 md:ml-64 min-h-screen h-auto pt-20 bg-white dark:bg-gray-800">
-        <div class="mx-auto max-w-screen-xl">
-            <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg">
+    <x-main-content>
+        <div class="max-w-screen-xl">
+            <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
                 <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
                     <div class="w-full md:w-1/2">
                         <form method="get" action="{{ route('timecard-update-requests.index') }}" class="flex items-center gap-x-2">
                             <label for="year" class="sr-only">年選択</label>
-                            <select name="year" id="year"
-                                class="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                onchange="this.form.submit()">
+                            <x-select name="year" id="year" onchange="this.form.submit()">
                                 @foreach ($yearOptions as $y)
                                     <option value="{{ $y }}" @if($y == $year) selected @endif>{{ $y }}</option>
                                 @endforeach
-                            </select>
+                            </x-select>
                             <label for="month" class="sr-only">月選択</label>
-                            <select name="month" id="month"
-                                class="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                onchange="this.form.submit()">
+                            <x-select name="month" id="month" onchange="this.form.submit()">
                                 @for ($m = 1; $m <= 12; $m++)
                                     <option value="{{ $m }}" @if($m == $month) selected @endif>{{ $m }}</option>
                                 @endfor
-                            </select>
+                            </x-select>
                         </form>
                     </div>
                 </div>
                 <div class="mt-4 overflow-x-auto">
                     @if(count($requests) > 0)
-                        <div class="min-w-[1080px] max-h-[80vh]">
+                        <div class="min-w-[1080px] max-h-[80vh] overflow-y-auto">
                             <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                 <thead class="sticky top-0 z-10 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                     <tr>
@@ -84,5 +80,5 @@
                 </div>
             </div>
         </div>
-    </main>
+    </x-main-content>
 </x-app-layout>
