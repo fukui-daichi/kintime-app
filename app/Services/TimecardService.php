@@ -397,4 +397,17 @@ foreach ($dateList as $md) {
         }
         return '未打刻';
     }
+
+    /**
+     * タイムカード編集用データを取得
+     */
+    public function getTimecardEditData(Timecard $timecard, Request $request): array
+    {
+        return [
+            'timecard' => $timecard,
+            'year' => $request->input('year', now()->year),
+            'month' => $request->input('month', now()->month),
+            'yearOptions' => $this->getYearOptions($timecard->user_id)
+        ];
+    }
 }

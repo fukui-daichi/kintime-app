@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Timecard;
 use App\Services\TimecardService;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\DateHelper;
+use Illuminate\Http\Request;
 
 class TimecardController extends Controller
 {
@@ -84,5 +86,43 @@ class TimecardController extends Controller
             default:
                 return view('timecard.user.index', $this->timecardService->getTimecardData($user, request()));
         }
+    }
+
+    /**
+     * タイムカード編集フォーム表示
+     */
+    public function edit(Timecard $timecard)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if ($user->getUserType() !== 'manager') {
+            abort(403, 'このページにアクセスする権限がありません');
+        }
+
+        return view('timecard.edit',
+            $this->timecardService->getTimecardEditData($timecard, request())
+        );
+    }
+
+    /**
+     * タイムカード更新処理
+     */
+    public function update(Request $request, Timecard $timecard)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if ($user->getUserType() !== 'manager') {
+            abort(403, 'このページにアクセスする権限がありません');
+        }
+
+        // TODO: バリデーションと更新処理を実装
+        return redirect()
+            ->route('timecard.index', [
+                'year' => $request->input('year'),
+                'month' => $request->input('month')
+            ])
+            ->with('status', '勤怠情報を更新しました');
     }
 }

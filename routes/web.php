@@ -25,6 +25,14 @@ Route::middleware('auth')->group(function () {
 
         // 勤怠一覧（月次・ページネーションなし）
         Route::get('/', [TimecardController::class, 'index'])->name('timecard.index');
+        // タイムカード直接編集ルート
+        Route::get('/{timecard}/edit', [TimecardController::class, 'edit'])
+            ->middleware('auth')
+            ->name('timecard.edit');
+        Route::put('/{timecard}', [TimecardController::class, 'update'])
+            ->middleware('auth')
+            ->name('timecard.update');
+
         // 打刻修正申請関連ルート
         Route::prefix('update-requests')->group(function () {
             Route::get('/', [TimecardUpdateRequestController::class, 'index'])->name('timecard-update-requests.index');
