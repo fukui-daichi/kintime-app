@@ -22,7 +22,7 @@ export default {
                 'weekend-sun': 'rgba(255, 0, 0, 0.1)',
             },
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['"Noto Sans JP"', ...defaultTheme.fontFamily.sans],
             },
         },
     },
