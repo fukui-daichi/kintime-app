@@ -229,16 +229,53 @@ class TimecardService
     /**
      * ダッシュボード表示用データを取得
      */
-    public function getDashboardData(User $user): array
+    public function getDashboardData(User $user, Request $request): array
     {
-        $timecard = $this->getTodayTimecard($user->id);
-        return [
-            'timecardButtonStatus' => $this->getTimecardButtonStatus($user->id),
-            'timecard' => $timecard ? $this->formatTimecardForDisplay($timecard) : null,
-            'currentDate' => DateHelper::getJapaneseDateString(),
-            'pendingRequests' => app(TimecardUpdateRequestService::class)
-                ->getPendingRequestsForDashboard($user->id)
+        $baseData = [
+            'user' => $user,
+            'currentDate' => DateHelper::getJapaneseDateString()
         ];
+
+        return match ($user->getUserType()) {
+            'admin' => $this->getAdminDashboardData($baseData, $request),
+            'manager' => $this->getManagerDashboardData($baseData, $request),
+            default => $this->getUserDashboardData($baseData, $request)
+        };
+    }
+
+    protected function getAdminDashboardData(array $baseData, Request $request): array
+    {
+        return array_merge($baseData, [
+            'systemStats' => $this->getSystemStatistics()
+        ]);
+    }
+
+    protected function getManagerDashboardData(array $baseData, Request $request): array
+    {
+        $timecard = $this->getTodayTimecard($baseData['user']->id);
+        return array_merge($baseData, [
+            'timecardButtonStatus' => $this->getTimecardButtonStatus($baseData['user']->id),
+            'timecard' => $timecard ? $this->formatTimecardForDisplay($timecard) : null,
+            'pendingRequests' => app(TimecardUpdateRequestService::class)
+                ->getPendingRequestsForDashboard($baseData['user']->id)
+        ]);
+    }
+
+    protected function getUserDashboardData(array $baseData, Request $request): array
+    {
+        $timecard = $this->getTodayTimecard($baseData['user']->id);
+        return array_merge($baseData, [
+            'timecardButtonStatus' => $this->getTimecardButtonStatus($baseData['user']->id),
+            'timecard' => $timecard ? $this->formatTimecardForDisplay($timecard) : null,
+            'pendingRequests' => app(TimecardUpdateRequestService::class)
+                ->getPendingRequestsForDashboard($baseData['user']->id)
+        ]);
+    }
+
+    protected function getSystemStatistics(): array
+    {
+        // TODO: 管理者用システム統計データを実装
+        return [];
     }
 
     /**

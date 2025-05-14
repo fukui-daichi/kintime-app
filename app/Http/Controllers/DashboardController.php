@@ -26,21 +26,12 @@ class DashboardController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        switch ($user->getUserType()) {
-            case 'admin':
-                return view('dashboard.admin.index', compact('user'));
-            case 'manager':
-                $dashboardData = $this->timecardService->getDashboardData($user);
-                return view('dashboard.manager.index', array_merge(
-                    ['user' => $user],
-                    $dashboardData
-                ));
-            default:
-                $dashboardData = $this->timecardService->getDashboardData($user);
-                return view('dashboard.user.index', array_merge(
-                    ['user' => $user],
-                    $dashboardData
-                ));
-        }
+        $view = match ($user->getUserType()) {
+            'admin' => 'dashboard.admin.index',
+            'manager' => 'dashboard.manager.index',
+            default => 'dashboard.user.index'
+        };
+
+        return view($view, $this->timecardService->getDashboardData($user, request()));
     }
 }
