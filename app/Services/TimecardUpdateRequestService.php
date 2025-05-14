@@ -166,18 +166,4 @@ class TimecardUpdateRequestService
         return $this->repository->findById($id);
     }
 
-    /**
-     * フォーム表示用データを準備
-     */
-    public function prepareFormData(Timecard $timecard): array
-    {
-        return [
-            'clock_in' => TimeHelper::formatTime($timecard->clock_in),
-            'clock_out' => TimeHelper::formatTime($timecard->clock_out),
-            'break_start' => TimeHelper::formatTime($timecard->break_start),
-            'break_end' => TimeHelper::formatTime($timecard->break_end),
-            'date_formatted' => TimeHelper::formatJapaneseDate($timecard->date),
-            'date_iso' => $timecard->date->format('Y-m-d')
-        ];
-    }
 }

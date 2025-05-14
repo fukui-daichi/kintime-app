@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\TimecardUpdateRequestRequest;
 use App\Models\Timecard;
 use App\Services\TimecardUpdateRequestService;
+use App\Helpers\TimecardHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,7 +29,7 @@ class TimecardUpdateRequestController extends Controller
     public function create(Timecard $timecard)
     {
         $user = Auth::user();
-        $formData = $this->service->prepareFormData($timecard);
+        $formData = TimecardHelper::formatForDisplay($timecard);
         return view('timecard.update-requests.create', compact('timecard', 'user', 'formData'));
     }
 

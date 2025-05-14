@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Timecard;
+use App\Helpers\TimecardHelper;
 use App\Models\User;
 use App\Repositories\TimecardRepository;
 use App\Constants\WorkTimeConstants;
@@ -66,14 +67,14 @@ class TimecardService
         });
 
         $result = [];
-foreach ($dateList as $md) {
-    if (isset($timecards[$md])) {
-        $result[] = $this->formatTimecardForDisplay($timecards[$md]);
-    } else {
-        $date = Carbon::createFromFormat('Y-m-d', $year . '-' . $md);
-        $result[] = $this->formatEmptyTimecardForDisplay($date);
-    }
-}
+        foreach ($dateList as $md) {
+            if (isset($timecards[$md])) {
+                $result[] = $this->formatTimecardForDisplay($timecards[$md]);
+            } else {
+                $date = Carbon::createFromFormat('Y-m-d', $year . '-' . $md);
+                $result[] = $this->formatEmptyTimecardForDisplay($date);
+            }
+        }
         return collect($result);
     }
 
@@ -404,7 +405,8 @@ foreach ($dateList as $md) {
     public function getTimecardEditData(Timecard $timecard, Request $request): array
     {
         return [
-            'timecard' => $timecard,
+            'timecard' => TimecardHelper::formatForEdit($timecard),
+            'user' => $timecard->user,
             'year' => $request->input('year', now()->year),
             'month' => $request->input('month', now()->month),
             'yearOptions' => $this->getYearOptions($timecard->user_id)

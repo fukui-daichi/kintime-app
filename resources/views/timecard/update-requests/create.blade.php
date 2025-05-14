@@ -3,7 +3,7 @@
     <x-user.sidebar />
 
     <x-main-content>
-        <div class="max-w-7xl mx-auto">
+        <div class="max-w-7xl">
             <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     <section>
