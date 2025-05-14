@@ -48,4 +48,18 @@ class DateHelper
     {
         return ($date ?? now())->locale('ja')->isoFormat('YYYY年M月D日（ddd）');
     }
+
+    /**
+     * 指定年月の日付リスト（1日〜末日）を返す
+     * @return array ['04-01', '04-02', ...]
+     */
+    public static function getMonthDateList(int $year, int $month): array
+    {
+        $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $dates = [];
+        for ($d = 1; $d <= $days; $d++) {
+            $dates[] = sprintf('%02d-%02d', $month, $d);
+        }
+        return $dates;
+    }
 }

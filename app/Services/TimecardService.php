@@ -4,11 +4,11 @@ namespace App\Services;
 
 use App\Models\Timecard;
 use App\Helpers\TimecardHelper;
+use App\Helpers\TimeFormat;
+use App\Helpers\TimeCalculator;
 use App\Models\User;
 use App\Repositories\TimecardRepository;
-use App\Constants\WorkTimeConstants;
 use App\Helpers\DateHelper;
-use App\Helpers\TimeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -61,7 +61,7 @@ class TimecardService
      */
     public function getTimecardsByMonth(int $userId, int $year, int $month)
     {
-        $dateList = TimeHelper::getMonthDateList($year, $month);
+        $dateList = DateHelper::getMonthDateList($year, $month);
         $timecards = $this->repository->getByUserIdAndMonth($userId, $year, $month)->keyBy(function ($tc) {
             return date('m-d', strtotime($tc->date));
         });
@@ -183,16 +183,16 @@ class TimecardService
     {
         return [
             'id' => $timecard->id,
-            'overtime' => TimeHelper::formatMinutesToTime($timecard->overtime_minutes),
-            'night_work' => TimeHelper::formatMinutesToTime($timecard->night_minutes),
-            'clock_in' => $timecard->clock_in ? TimeHelper::formatDateTime($timecard->clock_in) : '--:--',
-            'clock_out' => $timecard->clock_out ? TimeHelper::formatDateTime($timecard->clock_out) : '--:--',
-            'break_time' => TimeHelper::formatMinutesToTime(
+            'overtime' => TimeFormat::minutesToHHMM($timecard->overtime_minutes),
+            'night_work' => TimeFormat::minutesToHHMM($timecard->night_minutes),
+            'clock_in' => $timecard->clock_in ? TimeFormat::dateTimeToHHMM($timecard->clock_in) : '--:--',
+            'clock_out' => $timecard->clock_out ? TimeFormat::dateTimeToHHMM($timecard->clock_out) : '--:--',
+            'break_time' => TimeFormat::minutesToHHMM(
                 $timecard->break_start && $timecard->break_end
                 ? $timecard->break_start->diffInMinutes($timecard->break_end)
                 : 0
             ),
-            'work_time' => TimeHelper::formatMinutesToTime(
+            'work_time' => TimeFormat::minutesToHHMM(
                 $timecard->clock_in && $timecard->clock_out
                 ? $timecard->clock_in->diffInMinutes($timecard->clock_out) -
                 ($timecard->break_start && $timecard->break_end
@@ -294,16 +294,16 @@ class TimecardService
             if ($tc['clock_in'] !== '--:--') {
                 $totals['days_worked']++;
             }
-            $totals['total_work'] += TimeHelper::timeToMinutes($tc['work_time']);
-            $totals['total_overtime'] += TimeHelper::timeToMinutes($tc['overtime']);
-            $totals['total_night'] += TimeHelper::timeToMinutes($tc['night_work']);
+            $totals['total_work'] += TimeFormat::stringToMinutes($tc['work_time']);
+            $totals['total_overtime'] += TimeFormat::stringToMinutes($tc['overtime']);
+            $totals['total_night'] += TimeFormat::stringToMinutes($tc['night_work']);
         }
 
         return [
             'days_worked' => $totals['days_worked'],
-            'total_work' => TimeHelper::formatMinutesToTime($totals['total_work']),
-            'total_overtime' => TimeHelper::formatMinutesToTime($totals['total_overtime']),
-            'total_night' => TimeHelper::formatMinutesToTime($totals['total_night'])
+            'total_work' => TimeFormat::minutesToHHMM($totals['total_work']),
+            'total_overtime' => TimeFormat::minutesToHHMM($totals['total_overtime']),
+            'total_night' => TimeFormat::minutesToHHMM($totals['total_night'])
         ];
     }
 
@@ -312,20 +312,7 @@ class TimecardService
      */
     public function calculateOvertime(Timecard $timecard): array
     {
-        $totalMinutes = $timecard->clock_in->diffInMinutes($timecard->clock_out);
-
-        $breakMinutes = 0;
-        if ($timecard->break_start && $timecard->break_end) {
-            $breakMinutes = $timecard->break_start->diffInMinutes($timecard->break_end);
-        }
-
-        $overtimeMinutes = $totalMinutes - $breakMinutes - (WorkTimeConstants::DEFAULT_WORK_HOURS * 60);
-        $nightMinutes = $this->calculateNightTime($timecard);
-
-        return [
-            'overtime' => max($overtimeMinutes, 0),
-            'night' => $nightMinutes
-        ];
+        return TimeCalculator::overtime($timecard);
     }
 
     /**
@@ -333,30 +320,7 @@ class TimecardService
      */
     private function calculateNightTime(Timecard $timecard): int
     {
-        $nightStart = Carbon::parse($timecard->date)->setHour(WorkTimeConstants::NIGHT_START_HOUR);
-        $nightEnd = Carbon::parse($timecard->date)->addDay()->setHour(WorkTimeConstants::NIGHT_END_HOUR);
-
-        $clockIn = Carbon::parse($timecard->clock_in);
-        $clockOut = Carbon::parse($timecard->clock_out);
-
-        $nightStart = max($nightStart, $clockIn);
-        $nightEnd = min($nightEnd, $clockOut);
-
-        $nightMinutes = $nightStart < $nightEnd ? $nightStart->diffInMinutes($nightEnd) : 0;
-
-        if ($timecard->break_start && $timecard->break_end) {
-            $breakStart = Carbon::parse($timecard->break_start);
-            $breakEnd = Carbon::parse($timecard->break_end);
-
-            $breakNightStart = max($nightStart, $breakStart);
-            $breakNightEnd = min($nightEnd, $breakEnd);
-
-            if ($breakNightStart < $breakNightEnd) {
-                $nightMinutes -= $breakNightStart->diffInMinutes($breakNightEnd);
-            }
-        }
-
-        return max($nightMinutes, 0);
+        return TimeCalculator::nightTime($timecard);
     }
 
     /**
