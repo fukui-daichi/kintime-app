@@ -7,6 +7,8 @@ use App\Models\TimecardUpdateRequest;
 use App\Models\User;
 use App\Repositories\TimecardUpdateRequestRepository;
 use App\Helpers\TimeHelper;
+use App\Helpers\DateHelper;
+use App\Helpers\TimeFormat;
 
 class TimecardUpdateRequestService
 {
@@ -138,18 +140,18 @@ class TimecardUpdateRequestService
             ->through(function ($request) {
                 return [
                     'id' => $request->id,
-                    'created_at' => TimeHelper::formatJapaneseDate($request->created_at),
+                    'created_at' => DateHelper::formatJapaneseDateWithYearFromDateTime($request->created_at),
                     'before' => [
-                        '出勤' => TimeHelper::formatTime($request->original_clock_in),
-                        '退勤' => TimeHelper::formatTime($request->original_clock_out),
-                        '休憩開始' => TimeHelper::formatTime($request->original_break_start),
-                        '休憩終了' => TimeHelper::formatTime($request->original_break_end),
+                        '出勤' => $request->original_clock_in ? TimeFormat::dateTimeToHHMM($request->original_clock_in) : '--:--',
+                        '退勤' => $request->original_clock_out ? TimeFormat::dateTimeToHHMM($request->original_clock_out) : '--:--',
+                        '休憩開始' => $request->original_break_start ? TimeFormat::dateTimeToHHMM($request->original_break_start) : '--:--',
+                        '休憩終了' => $request->original_break_end ? TimeFormat::dateTimeToHHMM($request->original_break_end) : '--:--',
                     ],
                     'after' => [
-                        '出勤' => TimeHelper::formatTime($request->corrected_clock_in),
-                        '退勤' => TimeHelper::formatTime($request->corrected_clock_out),
-                        '休憩開始' => TimeHelper::formatTime($request->corrected_break_start),
-                        '休憩終了' => TimeHelper::formatTime($request->corrected_break_end),
+                        '出勤' => $request->corrected_clock_in ? TimeFormat::dateTimeToHHMM($request->corrected_clock_in) : '--:--',
+                        '退勤' => $request->corrected_clock_out ? TimeFormat::dateTimeToHHMM($request->corrected_clock_out) : '--:--',
+                        '休憩開始' => $request->corrected_break_start ? TimeFormat::dateTimeToHHMM($request->corrected_break_start) : '--:--',
+                        '休憩終了' => $request->corrected_break_end ? TimeFormat::dateTimeToHHMM($request->corrected_break_end) : '--:--',
                     ],
                     'status' => $request->status,
                     'approver_name' => $request->approver ? $request->approver->name : '-',

@@ -4,8 +4,7 @@ namespace App\Services;
 
 use App\Models\Timecard;
 use App\Helpers\TimecardHelper;
-use App\Helpers\TimeFormat;
-use App\Helpers\TimeCalculator;
+use App\Helpers\TimeHelper;
 use App\Models\User;
 use App\Repositories\TimecardRepository;
 use App\Helpers\DateHelper;
@@ -21,7 +20,61 @@ class TimecardService
         $this->repository = $repository;
     }
 
-    // --- 取得系 ---
+    // =============================================
+    // 1. データ取得系
+    // =============================================
+
+    /**
+     * ダッシュボード表示用データを取得
+     */
+    public function getDashboardData(User $user, Request $request): array
+    {
+        $baseData = [
+            'user' => $user,
+            'currentDate' => DateHelper::getCurrentYearMonth()
+        ];
+
+        return match ($user->getUserType()) {
+            'admin' => $this->getAdminDashboardData($baseData, $request),
+            'manager' => $this->getManagerDashboardData($baseData, $request),
+            default => $this->getUserDashboardData($baseData, $request)
+        };
+    }
+
+    protected function getAdminDashboardData(array $baseData, Request $request): array
+    {
+        return array_merge($baseData, [
+            'systemStats' => $this->getSystemStatistics()
+        ]);
+    }
+
+    protected function getManagerDashboardData(array $baseData, Request $request): array
+    {
+        $timecard = $this->getTodayTimecard($baseData['user']->id);
+        return array_merge($baseData, [
+            'timecardButtonStatus' => $this->getStampButtonStatuses($baseData['user']->id),
+            'timecard' => $timecard ? TimecardHelper::formatTimecardDisplay($timecard) : null,
+            'pendingRequests' => app(TimecardUpdateRequestService::class)
+                ->getPendingRequestsForDashboard($baseData['user']->id)
+        ]);
+    }
+
+    protected function getUserDashboardData(array $baseData, Request $request): array
+    {
+        $timecard = $this->getTodayTimecard($baseData['user']->id);
+        return array_merge($baseData, [
+            'timecardButtonStatus' => $this->getStampButtonStatuses($baseData['user']->id),
+            'timecard' => $timecard ? TimecardHelper::formatTimecardDisplay($timecard) : null,
+            'pendingRequests' => app(TimecardUpdateRequestService::class)
+                ->getPendingRequestsForDashboard($baseData['user']->id)
+        ]);
+    }
+
+    protected function getSystemStatistics(): array
+    {
+        // TODO: 管理者用システム統計データを実装
+        return [];
+    }
 
     /**
      * 今日の勤怠データを取得
@@ -48,8 +101,11 @@ class TimecardService
 
         return [
             'timecards' => $timecardsArray,
-            'yearOptions' => $this->getYearOptions($user->id),
-            'totals' => $this->calculateMonthlyTotals($timecardsArray),
+            'yearOptions' => DateHelper::getYearOptions(
+                min($this->repository->getAvailableYears($user->id)),
+                max($this->repository->getAvailableYears($user->id))
+            ),
+            'totals' => TimeHelper::calculateMonthlyTotals($timecardsArray),
             'year' => $yearMonth['year'],
             'month' => $yearMonth['month'],
             'user' => $user
@@ -61,7 +117,7 @@ class TimecardService
      */
     public function getTimecardsByMonth(int $userId, int $year, int $month)
     {
-        $dateList = DateHelper::getMonthDateList($year, $month);
+        $dateList = DateHelper::generateMonthDateList($year, $month);
         $timecards = $this->repository->getByUserIdAndMonth($userId, $year, $month)->keyBy(function ($tc) {
             return date('m-d', strtotime($tc->date));
         });
@@ -69,10 +125,10 @@ class TimecardService
         $result = [];
         foreach ($dateList as $md) {
             if (isset($timecards[$md])) {
-                $result[] = $this->formatTimecardForDisplay($timecards[$md]);
+                $result[] = TimecardHelper::formatTimecardDisplay($timecards[$md]);
             } else {
                 $date = Carbon::createFromFormat('Y-m-d', $year . '-' . $md);
-                $result[] = $this->formatEmptyTimecardForDisplay($date);
+                $result[] = TimecardHelper::formatTimecardDisplay(null);
             }
         }
         return collect($result);
@@ -86,31 +142,39 @@ class TimecardService
         $timecards = $this->repository->getByUserIdAndPeriod($userId, $startDate, $endDate);
 
         $timecards->getCollection()->transform(function ($timecard) {
-            return $this->formatTimecardForDisplay($timecard);
+            return TimecardHelper::formatTimecardDisplay($timecard);
         });
 
         return $timecards;
     }
 
     /**
-     * 年選択肢を取得
+     * タイムカード編集用データを取得
      */
-    public function getYearOptions(int $userId): array
+    public function getTimecardEditData(Timecard $timecard, Request $request): array
     {
-        $years = $this->repository->getAvailableYears($userId);
-        $minYear = min($years);
-        $maxYear = max($years);
-
-        // データがある最小年〜最大年+1年
-        return range($minYear, $maxYear + 1);
+        return [
+            'timecard' => TimecardHelper::formatForEdit($timecard),
+            'user' => $timecard->user,
+            'year' => $request->input('year', now()->year),
+            'month' => $request->input('month', now()->month),
+            'yearOptions' => DateHelper::getYearOptions(
+                min($this->repository->getAvailableYears($timecard->user_id)),
+                max($this->repository->getAvailableYears($timecard->user_id))
+            )
+        ];
     }
 
-    // --- ボタン状態 ---
+    // =============================================
+    // 2. 打刻操作系
+    // =============================================
 
     /**
-     * 勤怠ボタンの状態を取得
+     * 打刻ボタンの状態を取得
+     * @param int $userId ユーザーID
+     * @return array 各ボタンの状態（disabledフラグとラベル）
      */
-    public function getTimecardButtonStatus(int $userId): array
+    public function getStampButtonStatuses(int $userId): array
     {
         $timecard = $this->repository->getTodayTimecard($userId);
 
@@ -134,14 +198,11 @@ class TimecardService
         ];
     }
 
-    // --- 打刻系 ---
-
     /**
      * 出勤打刻
      */
     public function clockIn(User $user): Timecard
     {
-        $this->assertCanClockIn($user->id);
         return $this->repository->createClockInRecord($user->id);
     }
 
@@ -150,9 +211,12 @@ class TimecardService
      */
     public function clockOut(User $user): Timecard
     {
-        $this->assertCanClockOut($user->id);
         $timecard = $this->repository->createClockOutRecord($user->id);
-        $this->saveCalculatedTime($timecard);
+        $result = TimeHelper::calculateOvertimeMinutes($timecard);
+        $timecard->update([
+            'overtime_minutes' => $result['overtime'],
+            'night_minutes' => $result['night']
+        ]);
         return $timecard;
     }
 
@@ -161,7 +225,6 @@ class TimecardService
      */
     public function startBreak(User $user): Timecard
     {
-        $this->assertCanStartBreak($user->id);
         return $this->repository->createBreakStartRecord($user->id);
     }
 
@@ -170,247 +233,7 @@ class TimecardService
      */
     public function endBreak(User $user): Timecard
     {
-        $this->assertCanEndBreak($user->id);
         return $this->repository->createBreakEndRecord($user->id);
     }
 
-    // --- 計算・フォーマット系 ---
-
-    /**
-     * 勤怠データを表示用に整形
-     */
-    public function formatTimecardForDisplay(Timecard $timecard): array
-    {
-        return [
-            'id' => $timecard->id,
-            'overtime' => TimeFormat::minutesToHHMM($timecard->overtime_minutes),
-            'night_work' => TimeFormat::minutesToHHMM($timecard->night_minutes),
-            'clock_in' => $timecard->clock_in ? TimeFormat::dateTimeToHHMM($timecard->clock_in) : '--:--',
-            'clock_out' => $timecard->clock_out ? TimeFormat::dateTimeToHHMM($timecard->clock_out) : '--:--',
-            'break_time' => TimeFormat::minutesToHHMM(
-                $timecard->break_start && $timecard->break_end
-                ? $timecard->break_start->diffInMinutes($timecard->break_end)
-                : 0
-            ),
-            'work_time' => TimeFormat::minutesToHHMM(
-                $timecard->clock_in && $timecard->clock_out
-                ? $timecard->clock_in->diffInMinutes($timecard->clock_out) -
-                ($timecard->break_start && $timecard->break_end
-                    ? $timecard->break_start->diffInMinutes($timecard->break_end)
-                    : 0)
-                : 0
-            ),
-            'date' => $timecard->date->locale('ja')->isoFormat('M月D日（dd）'),
-            'day_class' => $timecard->date->dayOfWeek === 0 ? 'bg-weekend-sun' :
-                         ($timecard->date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
-            'status' => $this->getStatusLabel($timecard)
-        ];
-    }
-
-    /**
-     * 空欄用の勤怠データを表示用に整形
-     */
-    private function formatEmptyTimecardForDisplay(Carbon $date): array
-    {
-        return [
-            'date' => $date->locale('ja')->isoFormat('M月D日（dd）'),
-            'clock_in' => '--:--',
-            'clock_out' => '--:--',
-            'break_time' => '--:--',
-            'work_time' => '--:--',
-            'overtime' => '--:--',
-            'night_work' => '--:--',
-            'status' => '未打刻',
-            'day_class' => $date->dayOfWeek === 0 ? 'bg-weekend-sun' :
-                         ($date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
-        ];
-    }
-
-    /**
-     * ダッシュボード表示用データを取得
-     */
-    public function getDashboardData(User $user, Request $request): array
-    {
-        $baseData = [
-            'user' => $user,
-            'currentDate' => DateHelper::getJapaneseDateString()
-        ];
-
-        return match ($user->getUserType()) {
-            'admin' => $this->getAdminDashboardData($baseData, $request),
-            'manager' => $this->getManagerDashboardData($baseData, $request),
-            default => $this->getUserDashboardData($baseData, $request)
-        };
-    }
-
-    protected function getAdminDashboardData(array $baseData, Request $request): array
-    {
-        return array_merge($baseData, [
-            'systemStats' => $this->getSystemStatistics()
-        ]);
-    }
-
-    protected function getManagerDashboardData(array $baseData, Request $request): array
-    {
-        $timecard = $this->getTodayTimecard($baseData['user']->id);
-        return array_merge($baseData, [
-            'timecardButtonStatus' => $this->getTimecardButtonStatus($baseData['user']->id),
-            'timecard' => $timecard ? $this->formatTimecardForDisplay($timecard) : null,
-            'pendingRequests' => app(TimecardUpdateRequestService::class)
-                ->getPendingRequestsForDashboard($baseData['user']->id)
-        ]);
-    }
-
-    protected function getUserDashboardData(array $baseData, Request $request): array
-    {
-        $timecard = $this->getTodayTimecard($baseData['user']->id);
-        return array_merge($baseData, [
-            'timecardButtonStatus' => $this->getTimecardButtonStatus($baseData['user']->id),
-            'timecard' => $timecard ? $this->formatTimecardForDisplay($timecard) : null,
-            'pendingRequests' => app(TimecardUpdateRequestService::class)
-                ->getPendingRequestsForDashboard($baseData['user']->id)
-        ]);
-    }
-
-    protected function getSystemStatistics(): array
-    {
-        // TODO: 管理者用システム統計データを実装
-        return [];
-    }
-
-    /**
-     * 月間合計を計算（配列対応版）
-     */
-    public function calculateMonthlyTotals(array $timecards): array
-    {
-        $totals = [
-            'days_worked' => 0,
-            'total_work' => 0,
-            'total_overtime' => 0,
-            'total_night' => 0
-        ];
-
-        foreach ($timecards as $tc) {
-            if ($tc['clock_in'] !== '--:--') {
-                $totals['days_worked']++;
-            }
-            $totals['total_work'] += TimeFormat::stringToMinutes($tc['work_time']);
-            $totals['total_overtime'] += TimeFormat::stringToMinutes($tc['overtime']);
-            $totals['total_night'] += TimeFormat::stringToMinutes($tc['night_work']);
-        }
-
-        return [
-            'days_worked' => $totals['days_worked'],
-            'total_work' => TimeFormat::minutesToHHMM($totals['total_work']),
-            'total_overtime' => TimeFormat::minutesToHHMM($totals['total_overtime']),
-            'total_night' => TimeFormat::minutesToHHMM($totals['total_night'])
-        ];
-    }
-
-    /**
-     * 残業時間と深夜時間を計算
-     */
-    public function calculateOvertime(Timecard $timecard): array
-    {
-        return TimeCalculator::overtime($timecard);
-    }
-
-    /**
-     * 深夜時間を計算
-     */
-    private function calculateNightTime(Timecard $timecard): int
-    {
-        return TimeCalculator::nightTime($timecard);
-    }
-
-    /**
-     * 計算結果を保存
-     */
-    public function saveCalculatedTime(Timecard $timecard): void
-    {
-        $result = $this->calculateOvertime($timecard);
-        $timecard->update([
-            'overtime_minutes' => $result['overtime'],
-            'night_minutes' => $result['night']
-        ]);
-    }
-
-    // --- バリデーション・アサート系 ---
-
-    /**
-     * 出勤打刻可能かチェック
-     */
-    private function assertCanClockIn(int $userId): void
-    {
-        $existing = $this->repository->getTodayTimecard($userId);
-        if ($existing && $existing->clock_in !== null) {
-            throw new \Exception('既に出勤打刻済みです');
-        }
-    }
-
-    /**
-     * 退勤打刻可能かチェック
-     */
-    private function assertCanClockOut(int $userId): void
-    {
-        $timecard = $this->repository->getLatestTimecard($userId);
-        if (!$timecard || $timecard->clock_out) {
-            throw new \Exception('退勤打刻ができません');
-        }
-    }
-
-    /**
-     * 休憩開始打刻可能かチェック
-     */
-    private function assertCanStartBreak(int $userId): void
-    {
-        $timecard = $this->repository->getLatestTimecard($userId);
-        if (!$timecard || $timecard->break_start) {
-            throw new \Exception('休憩開始打刻ができません');
-        }
-    }
-
-    /**
-     * 休憩終了打刻可能かチェック
-     */
-    private function assertCanEndBreak(int $userId): void
-    {
-        $timecard = $this->repository->getLatestTimecard($userId);
-        if (!$timecard || !$timecard->break_start || $timecard->break_end) {
-            throw new \Exception('休憩終了打刻ができません');
-        }
-    }
-
-    // --- ステータスラベル ---
-
-    /**
-     * 勤怠ステータスラベルを取得
-     */
-    private function getStatusLabel(Timecard $timecard): string
-    {
-        if ($timecard->clock_out) {
-            return '退勤済み';
-        }
-        if ($timecard->break_start && !$timecard->break_end) {
-            return '休憩中';
-        }
-        if ($timecard->clock_in) {
-            return '勤務中';
-        }
-        return '未打刻';
-    }
-
-    /**
-     * タイムカード編集用データを取得
-     */
-    public function getTimecardEditData(Timecard $timecard, Request $request): array
-    {
-        return [
-            'timecard' => TimecardHelper::formatForEdit($timecard),
-            'user' => $timecard->user,
-            'year' => $request->input('year', now()->year),
-            'month' => $request->input('month', now()->month),
-            'yearOptions' => $this->getYearOptions($timecard->user_id)
-        ];
-    }
 }
