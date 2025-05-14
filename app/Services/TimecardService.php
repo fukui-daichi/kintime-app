@@ -31,7 +31,7 @@ class TimecardService
     {
         $baseData = [
             'user' => $user,
-            'currentDate' => DateHelper::getCurrentYearMonth()
+            'currentDate' => DateHelper::getCurrentJapaneseDate(),
         ];
 
         return match ($user->getUserType()) {

@@ -13,6 +13,29 @@ class DateHelper
     // =============================================
 
     /**
+     * 現在の日付を配列で取得
+     * @return array ['year' => 2025, 'month' => 5, 'day' => 14]
+     */
+    public static function getCurrentDate(): array
+    {
+        $now = now();
+        return [
+            'year' => $now->year,
+            'month' => $now->month,
+            'day' => $now->day
+        ];
+    }
+
+    /**
+     * 現在の日付を日本語形式で取得
+     * @return string "M月D日（dd）"形式の文字列
+     */
+    public static function getCurrentJapaneseDate(): string
+    {
+        return now()->locale('ja')->isoFormat('M月D日（dd）');
+    }
+
+    /**
      * 現在の年月を配列で取得
      * @return array ['year' => 2025, 'month' => 5]
      */
