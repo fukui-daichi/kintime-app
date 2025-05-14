@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Timecard;
-use App\Helpers\TimecardHelper;
 use App\Helpers\TimeHelper;
 use App\Models\User;
 use App\Repositories\TimecardRepository;
@@ -53,7 +52,7 @@ class TimecardService
         $timecard = $this->getTodayTimecard($baseData['user']->id);
         return array_merge($baseData, [
             'timecardButtonStatus' => $this->getStampButtonStatuses($baseData['user']->id),
-            'timecard' => $timecard ? TimecardHelper::formatTimecardDisplay($timecard) : null,
+            'timecard' => $timecard ? $this->timecardData($timecard) : null,
             'pendingRequests' => app(TimecardUpdateRequestService::class)
                 ->getPendingRequestsForDashboard($baseData['user']->id)
         ]);
@@ -64,10 +63,83 @@ class TimecardService
         $timecard = $this->getTodayTimecard($baseData['user']->id);
         return array_merge($baseData, [
             'timecardButtonStatus' => $this->getStampButtonStatuses($baseData['user']->id),
-            'timecard' => $timecard ? TimecardHelper::formatTimecardDisplay($timecard) : null,
+            'timecard' => $timecard ? $this->timecardData($timecard) : null,
             'pendingRequests' => app(TimecardUpdateRequestService::class)
                 ->getPendingRequestsForDashboard($baseData['user']->id)
         ]);
+    }
+
+    /**
+     * 勤怠データを表示用にフォーマット
+     */
+    public function timecardData(?Timecard $timecard = null): array
+    {
+        if (!$timecard) {
+            $date = now();
+            return [
+                'date' => $date->locale('ja')->isoFormat('M月D日（dd）'),
+                'clock_in' => '--:--',
+                'clock_out' => '--:--',
+                'break_time' => '--:--',
+                'work_time' => '--:--',
+                'overtime' => '--:--',
+                'night_work' => '--:--',
+                'status' => '未打刻',
+                'day_class' => $date->dayOfWeek === 0 ? 'bg-weekend-sun' :
+                             ($date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
+            ];
+        }
+
+        return [
+            'id' => $timecard->id,
+            'overtime' => TimeHelper::formatMinutesToTime($timecard->overtime_minutes),
+            'night_work' => TimeHelper::formatMinutesToTime($timecard->night_minutes),
+            'clock_in' => TimeHelper::formatDateTimeToTime($timecard->clock_in),
+            'clock_out' => TimeHelper::formatDateTimeToTime($timecard->clock_out),
+            'break_time' => TimeHelper::formatMinutesToTime(
+                $timecard->break_start && $timecard->break_end
+                ? $timecard->break_start->diffInMinutes($timecard->break_end)
+                : 0
+            ),
+            'work_time' => TimeHelper::formatMinutesToTime(TimeHelper::calculateWorkMinutes($timecard)),
+            'date' => $timecard->date->locale('ja')->isoFormat('M月D日（dd）'),
+            'day_class' => $timecard->date->dayOfWeek === 0 ? 'bg-weekend-sun' :
+                         ($timecard->date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
+            'status' => $this->getTimecardStatusLabel($timecard)
+        ];
+    }
+
+    /**
+     * 勤怠ステータスラベルを取得
+     */
+    private function getTimecardStatusLabel(Timecard $timecard): string
+    {
+        if ($timecard->clock_out) {
+            return '退勤済み';
+        }
+        if ($timecard->break_start && !$timecard->break_end) {
+            return '休憩中';
+        }
+        if ($timecard->clock_in) {
+            return '勤務中';
+        }
+        return '未打刻';
+    }
+
+    /**
+     * タイムカード編集用データをフォーマット
+     */
+    public function timecardEditData(Timecard $timecard): array
+    {
+        return [
+            'id' => $timecard->id,
+            'clock_in' => $timecard->clock_in ? $timecard->clock_in->format('H:i') : null,
+            'clock_out' => $timecard->clock_out ? $timecard->clock_out->format('H:i') : null,
+            'break_start' => $timecard->break_start ? $timecard->break_start->format('H:i') : null,
+            'break_end' => $timecard->break_end ? $timecard->break_end->format('H:i') : null,
+            'date_formatted' => DateHelper::formatJapaneseDateWithoutYear($timecard->date),
+            'date_iso' => $timecard->date->format('Y-m-d')
+        ];
     }
 
     protected function getSystemStatistics(): array
@@ -125,10 +197,10 @@ class TimecardService
         $result = [];
         foreach ($dateList as $md) {
             if (isset($timecards[$md])) {
-                $result[] = TimecardHelper::formatTimecardDisplay($timecards[$md]);
+                $result[] = $this->timecardData($timecards[$md]);
             } else {
                 $date = Carbon::createFromFormat('Y-m-d', $year . '-' . $md);
-                $result[] = TimecardHelper::formatTimecardDisplay(null);
+                $result[] = $this->timecardData(null);
             }
         }
         return collect($result);
@@ -142,7 +214,7 @@ class TimecardService
         $timecards = $this->repository->getByUserIdAndPeriod($userId, $startDate, $endDate);
 
         $timecards->getCollection()->transform(function ($timecard) {
-            return TimecardHelper::formatTimecardDisplay($timecard);
+            return $this->timecardData($timecard);
         });
 
         return $timecards;
@@ -154,7 +226,7 @@ class TimecardService
     public function getTimecardEditData(Timecard $timecard, Request $request): array
     {
         return [
-            'timecard' => TimecardHelper::formatForEdit($timecard),
+            'timecard' => $this->timecardEditData($timecard),
             'user' => $timecard->user,
             'year' => $request->input('year', now()->year),
             'month' => $request->input('month', now()->month),
