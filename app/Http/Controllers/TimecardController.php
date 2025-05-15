@@ -117,7 +117,15 @@ class TimecardController extends Controller
             abort(403, 'このページにアクセスする権限がありません');
         }
 
-        // TODO: バリデーションと更新処理を実装
+        $validated = $request->validate([
+            'clock_in' => 'required|date_format:H:i',
+            'clock_out' => 'required|date_format:H:i',
+            'break_start' => 'required|date_format:H:i',
+            'break_end' => 'required|date_format:H:i'
+        ]);
+
+        $this->timecardService->updateTimecard($timecard, $validated);
+
         return redirect()
             ->route('timecard.index', [
                 'year' => $timecard->date->year,

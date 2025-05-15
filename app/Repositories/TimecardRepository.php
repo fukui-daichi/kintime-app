@@ -111,4 +111,18 @@ class TimecardRepository
             ->pluck('year')
             ->toArray();
     }
+
+    /**
+     * タイムカード情報を更新
+     */
+    public function updateTimecard(Timecard $timecard, array $data): Timecard
+    {
+        $timecard->update([
+            'clock_in' => $data['clock_in'],
+            'clock_out' => $data['clock_out'],
+            'break_start' => $data['break_start'],
+            'break_end' => $data['break_end']
+        ]);
+        return $timecard->fresh();
+    }
 }

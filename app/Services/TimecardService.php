@@ -309,4 +309,22 @@ class TimecardService
         return $this->repository->createBreakEndRecord($user->id);
     }
 
+    /**
+     * タイムカード情報を更新
+     */
+    public function updateTimecard(Timecard $timecard, array $data): Timecard
+    {
+        $timecard = $this->repository->updateTimecard($timecard, $data);
+
+        // 残業時間と深夜時間を再計算
+        if ($timecard->clock_in && $timecard->clock_out) {
+            $result = TimeHelper::calculateOvertimeMinutes($timecard);
+            $timecard->update([
+                'overtime_minutes' => $result['overtime'],
+                'night_minutes' => $result['night']
+            ]);
+        }
+
+        return $timecard->fresh();
+    }
 }
