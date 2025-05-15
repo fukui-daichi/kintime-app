@@ -11,7 +11,7 @@ use App\Helpers\TimeHelper;
 
 class TimecardUpdateRequestService
 {
-    private TimecardUpdateRequestRepository $repository;
+    protected TimecardUpdateRequestRepository $repository;
 
     public function __construct(TimecardUpdateRequestRepository $repository)
     {
@@ -19,7 +19,23 @@ class TimecardUpdateRequestService
     }
 
     /**
+     * リポジトリインスタンスを取得
+     * @return TimecardUpdateRequestRepository
+     */
+    public function getRepository(): TimecardUpdateRequestRepository
+    {
+        return $this->repository;
+    }
+
+    // =============================================
+    // 1. データ取得系
+    // =============================================
+
+    /**
      * ダッシュボード表示用の未承認申請を取得
+     * @param int $userId ユーザーID
+     * @param int $limit 取得件数
+     * @return \Illuminate\Support\Collection フォーマット済み申請データコレクション
      */
     public function getPendingRequestsForDashboard(int $userId, int $limit = 5)
     {
@@ -30,14 +46,98 @@ class TimecardUpdateRequestService
             ->get()
             ->map(function ($request) {
                 return [
-                    'created_at' => $request->created_at->format('Y/m/d'),
+                    'created_at' => DateHelper::formatJapaneseDateWithoutYear($request->created_at),
                     'reason' => $request->reason,
-                    'status' => $this->getStatusText($request->status)
+                    'status' => $this->getStatusLabel($request->status)
                 ];
             });
     }
 
-    private function getStatusText(string $status): string
+    /**
+     * 申請作成フォーム用データ取得
+     */
+    /**
+     * 申請作成フォーム用データ取得
+     * @param Timecard $timecard タイムカードオブジェクト
+     * @param User $user ユーザーオブジェクト
+     * @return array 表示用データ配列
+     */
+    public function getCreateFormData(Timecard $timecard, User $user): array
+    {
+        return [
+            'user' => $user,
+            'timecard' => $timecard,
+            'formData' => [
+                'date_formatted' => DateHelper::formatJapaneseDateWithYear($timecard->date),
+                'date_iso' => DateHelper::formatToIsoDate($timecard->date),
+                'clock_in' => TimeHelper::formatDateTimeToTime($timecard->clock_in),
+                'clock_out' => TimeHelper::formatDateTimeToTime($timecard->clock_out),
+                'break_start' => TimeHelper::formatDateTimeToTime($timecard->break_start),
+                'break_end' => TimeHelper::formatDateTimeToTime($timecard->break_end)
+            ]
+        ];
+    }
+
+    /**
+     * 申請一覧表示用データを取得
+     * @param User $user ユーザーオブジェクト
+     * @param \Illuminate\Http\Request $request リクエスト
+     * @return array 表示用データ配列
+     */
+    public function getRequestData(User $user, \Illuminate\Http\Request $request): array
+    {
+        $year = $request->input('year', now()->year);
+        $month = $request->input('month', now()->month);
+
+        return [
+            'user' => $user,
+            'requests' => $this->getUserRequests($user->id, $year, $month, 10),
+            'year' => $year,
+            'month' => $month,
+            'yearOptions' => range(now()->year - 2, now()->year + 1)
+        ];
+    }
+
+    /**
+     * ユーザーの申請一覧取得（フォーマット済みデータ）
+     * @param int $userId ユーザーID
+     * @param int $year 対象年
+     * @param int $month 対象月
+     * @param int $perPage ページネーション件数
+     * @return \Illuminate\Pagination\LengthAwarePaginator ページネーションオブジェクト
+     */
+    public function getUserRequests(int $userId, int $year, int $month, int $perPage = 10)
+    {
+        return $this->repository->getByUserId($userId, $year, $month, $perPage)
+            ->map(function ($request) {
+                return [
+                    'id' => $request->id,
+                    'created_at' => DateHelper::formatJapaneseDateWithoutYear($request->created_at),
+                    'before' => [
+                        '出勤' => TimeHelper::formatDateTimeToTime($request->original_clock_in),
+                        '退勤' => TimeHelper::formatDateTimeToTime($request->original_clock_out),
+                        '休憩開始' => TimeHelper::formatDateTimeToTime($request->original_break_start),
+                        '休憩終了' => TimeHelper::formatDateTimeToTime($request->original_break_end),
+                    ],
+                    'after' => [
+                        '出勤' => TimeHelper::formatDateTimeToTime($request->corrected_clock_in),
+                        '退勤' => TimeHelper::formatDateTimeToTime($request->corrected_clock_out),
+                        '休憩開始' => TimeHelper::formatDateTimeToTime($request->corrected_break_start),
+                        '休憩終了' => TimeHelper::formatDateTimeToTime($request->corrected_break_end),
+                    ],
+                    'status' => $this->getStatusLabel($request->status),
+                    'approver_name' => $request->approver?->name ?? '-',
+                    'reason' => $request->reason
+                ];
+            });
+    }
+
+    /**
+     * ステータスラベルを取得
+     * @param string $status ステータス値
+     * @return string 表示用ラベル
+     */
+    public function getStatusLabel(string $status): string
     {
         return match($status) {
             TimecardUpdateRequest::STATUS_PENDING => '承認待ち',
@@ -47,8 +147,15 @@ class TimecardUpdateRequestService
         };
     }
 
+    // =============================================
+    // 2. 申請処理系
+    // =============================================
+
     /**
      * 申請作成処理
+     * @param array $validated バリデーション済みデータ
+     * @param User $user 申請ユーザー
+     * @return TimecardUpdateRequest 作成された申請データ
      */
     public function createRequest(array $validated, User $user): TimecardUpdateRequest
     {
@@ -58,10 +165,13 @@ class TimecardUpdateRequestService
 
     /**
      * 申請承認処理
+     * @param int $id 申請ID
+     * @param User $approver 承認者
+     * @return bool 承認成功可否
      */
     public function approveRequest(int $id, User $approver): bool
     {
-        $request = $this->findRequest($id);
+        $request = $this->repository->findById($id);
         if (!$request || !$this->canApprove($approver, $request)) {
             return false;
         }
@@ -70,8 +180,15 @@ class TimecardUpdateRequestService
         return $this->repository->update($request, $approveData);
     }
 
+    // =============================================
+    // 3. データ加工系
+    // =============================================
+
     /**
      * 申請データの加工
+     * @param array $validated バリデーション済みデータ
+     * @param User $user 申請ユーザー
+     * @return array データベース登録用フォーマット
      */
     public function buildCreateData(array $validated, User $user): array
     {
@@ -95,6 +212,8 @@ class TimecardUpdateRequestService
 
     /**
      * 承認時のデータ加工
+     * @param User $approver 承認者
+     * @return array 更新用データ
      */
     public function buildApproveData(User $approver): array
     {
@@ -106,6 +225,9 @@ class TimecardUpdateRequestService
 
     /**
      * 承認権限判定
+     * @param User $user 承認権限確認対象ユーザー
+     * @param TimecardUpdateRequest $request 申請データ
+     * @return bool 承認可能か否か
      */
     public function canApprove(User $user, TimecardUpdateRequest $request): bool
     {
@@ -113,105 +235,10 @@ class TimecardUpdateRequestService
             ($user->isManager() && $user->department_id === $request->user->department_id);
     }
 
-    /**
-     * 申請一覧表示用データを取得
-     */
-    public function getRequestData(User $user, \Illuminate\Http\Request $request): array
-    {
-        $year = $request->input('year', now()->year);
-        $month = $request->input('month', now()->month);
+    // =============================================
+    // 4. 表示フォーマット系
+    // =============================================
 
-        return [
-            'user' => $user,
-            'requests' => $this->getUserRequests($user->id, $year, $month, 10),
-            'year' => $year,
-            'month' => $month,
-            'yearOptions' => range(now()->year - 2, now()->year + 1)
-        ];
-    }
 
-    /**
-     * ユーザーの申請一覧取得（フォーマット済みデータ）
-     */
-    public function getUserRequests(int $userId, int $year, int $month, int $perPage = 10)
-    {
-        return $this->repository->getByUserId($userId, $year, $month, $perPage)
-            ->map(function ($request) {
-                return $this->formatRequest($request);
-            });
-    }
-
-    /**
-     * 申請データをビュー用にフォーマット
-     */
-    public function formatRequest(TimecardUpdateRequest $request): array
-    {
-        return [
-            'id' => $request->id,
-            'created_at' => DateHelper::formatJapaneseDateWithYear($request->created_at),
-            'before' => [
-                '出勤' => $this->formatTimeField($request->original_clock_in),
-                '退勤' => $this->formatTimeField($request->original_clock_out),
-                '休憩開始' => $this->formatTimeField($request->original_break_start),
-                '休憩終了' => $this->formatTimeField($request->original_break_end),
-            ],
-            'after' => [
-                '出勤' => $this->formatTimeField($request->corrected_clock_in),
-                '退勤' => $this->formatTimeField($request->corrected_clock_out),
-                '休憩開始' => $this->formatTimeField($request->corrected_break_start),
-                '休憩終了' => $this->formatTimeField($request->corrected_break_end),
-            ],
-            'status' => $this->getStatusDisplay($request->status),
-            'approver_name' => $request->approver?->name ?? '-',
-            'reason' => $request->reason
-        ];
-    }
-
-    /**
-     * 時間フィールドフォーマット
-     */
-    private function formatTimeField($datetime): string
-    {
-        return $datetime ? TimeHelper::formatDateTimeToTime($datetime) : '--:--';
-    }
-
-    /**
-     * ステータス表示用テキスト取得
-     */
-    private function getStatusDisplay(string $status): string
-    {
-        return match($status) {
-            TimecardUpdateRequest::STATUS_PENDING => '承認待ち',
-            TimecardUpdateRequest::STATUS_APPROVED => '承認済み',
-            TimecardUpdateRequest::STATUS_REJECTED => '却下',
-            default => $status
-        };
-    }
-
-    /**
-     * 申請作成フォーム用データ取得
-     */
-    public function getCreateFormData(Timecard $timecard): array
-    {
-        return [
-            'timecard' => $timecard,
-            'formData' => [
-                'date_formatted' => DateHelper::formatJapaneseDateWithYear($timecard->date),
-                'date_iso' => $timecard->date->format('Y-m-d'),
-                'clock_in' => TimeHelper::formatDateTimeToTime($timecard->clock_in),
-                'clock_out' => TimeHelper::formatDateTimeToTime($timecard->clock_out),
-                'break_start' => TimeHelper::formatDateTimeToTime($timecard->break_start),
-                'break_end' => TimeHelper::formatDateTimeToTime($timecard->break_end)
-            ]
-        ];
-    }
-
-    /**
-     * IDで申請を検索
-     */
-    public function findRequest(int $id): ?TimecardUpdateRequest
-    {
-        return $this->repository->findById($id);
-    }
 
 }

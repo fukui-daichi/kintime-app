@@ -217,7 +217,7 @@ class TimecardService
             'break_start' => TimeHelper::formatDateTimeToTime($timecard->break_start, 'H:i'),
             'break_end' => TimeHelper::formatDateTimeToTime($timecard->break_end, 'H:i'),
             'date_formatted' => DateHelper::formatJapaneseDateWithYear($timecard->date),
-            'date_iso' => $timecard->date->format('Y-m-d')
+            'date_iso' => DateHelper::formatToIsoDate($timecard->date)
         ];
     }
 

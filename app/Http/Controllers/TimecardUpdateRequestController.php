@@ -28,8 +28,9 @@ class TimecardUpdateRequestController extends Controller
 
     public function create(Timecard $timecard)
     {
+        $user = Auth::user();
         return view('timecard.update-requests.create',
-            $this->service->getCreateFormData($timecard)
+            $this->service->getCreateFormData($timecard, $user)
         );
     }
 
@@ -44,7 +45,7 @@ class TimecardUpdateRequestController extends Controller
 
     public function show($id)
     {
-        $request = $this->service->findRequest($id);
+        $request = $this->service->getRepository()->findById($id);
         if (!$request) {
             abort(404);
         }

@@ -120,6 +120,16 @@ class DateHelper
         return $date->locale('ja')->isoFormat('M月D日（dd）');
     }
 
+    /**
+     * DateTimeオブジェクトをISO形式の日付文字列に変換
+     * @param DateTime $date 変換対象のDateTimeオブジェクト
+     * @return string "Y-m-d"形式の文字列
+     */
+    public static function formatToIsoDate(DateTime $date): string
+    {
+        return $date->format('Y-m-d');
+    }
+
     // =============================================
     // 日付リスト生成処理
     // =============================================
