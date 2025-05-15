@@ -6,9 +6,8 @@ use App\Models\Timecard;
 use App\Models\TimecardUpdateRequest;
 use App\Models\User;
 use App\Repositories\TimecardUpdateRequestRepository;
-use App\Helpers\TimeHelper;
 use App\Helpers\DateHelper;
-use App\Helpers\TimeFormat;
+use App\Helpers\TimeHelper;
 
 class TimecardUpdateRequestService
 {
@@ -137,27 +136,74 @@ class TimecardUpdateRequestService
     public function getUserRequests(int $userId, int $year, int $month, int $perPage = 10)
     {
         return $this->repository->getByUserId($userId, $year, $month, $perPage)
-            ->through(function ($request) {
-                return [
-                    'id' => $request->id,
-                    'created_at' => DateHelper::formatJapaneseDateWithYearFromDateTime($request->created_at),
-                    'before' => [
-                        '出勤' => $request->original_clock_in ? TimeFormat::dateTimeToHHMM($request->original_clock_in) : '--:--',
-                        '退勤' => $request->original_clock_out ? TimeFormat::dateTimeToHHMM($request->original_clock_out) : '--:--',
-                        '休憩開始' => $request->original_break_start ? TimeFormat::dateTimeToHHMM($request->original_break_start) : '--:--',
-                        '休憩終了' => $request->original_break_end ? TimeFormat::dateTimeToHHMM($request->original_break_end) : '--:--',
-                    ],
-                    'after' => [
-                        '出勤' => $request->corrected_clock_in ? TimeFormat::dateTimeToHHMM($request->corrected_clock_in) : '--:--',
-                        '退勤' => $request->corrected_clock_out ? TimeFormat::dateTimeToHHMM($request->corrected_clock_out) : '--:--',
-                        '休憩開始' => $request->corrected_break_start ? TimeFormat::dateTimeToHHMM($request->corrected_break_start) : '--:--',
-                        '休憩終了' => $request->corrected_break_end ? TimeFormat::dateTimeToHHMM($request->corrected_break_end) : '--:--',
-                    ],
-                    'status' => $request->status,
-                    'approver_name' => $request->approver ? $request->approver->name : '-',
-                    'reason' => $request->reason
-                ];
+            ->map(function ($request) {
+                return $this->formatRequest($request);
             });
+    }
+
+    /**
+     * 申請データをビュー用にフォーマット
+     */
+    public function formatRequest(TimecardUpdateRequest $request): array
+    {
+        return [
+            'id' => $request->id,
+            'created_at' => DateHelper::formatJapaneseDateWithYear($request->created_at),
+            'before' => [
+                '出勤' => $this->formatTimeField($request->original_clock_in),
+                '退勤' => $this->formatTimeField($request->original_clock_out),
+                '休憩開始' => $this->formatTimeField($request->original_break_start),
+                '休憩終了' => $this->formatTimeField($request->original_break_end),
+            ],
+            'after' => [
+                '出勤' => $this->formatTimeField($request->corrected_clock_in),
+                '退勤' => $this->formatTimeField($request->corrected_clock_out),
+                '休憩開始' => $this->formatTimeField($request->corrected_break_start),
+                '休憩終了' => $this->formatTimeField($request->corrected_break_end),
+            ],
+            'status' => $this->getStatusDisplay($request->status),
+            'approver_name' => $request->approver?->name ?? '-',
+            'reason' => $request->reason
+        ];
+    }
+
+    /**
+     * 時間フィールドフォーマット
+     */
+    private function formatTimeField($datetime): string
+    {
+        return $datetime ? TimeHelper::formatDateTimeToTime($datetime) : '--:--';
+    }
+
+    /**
+     * ステータス表示用テキスト取得
+     */
+    private function getStatusDisplay(string $status): string
+    {
+        return match($status) {
+            TimecardUpdateRequest::STATUS_PENDING => '承認待ち',
+            TimecardUpdateRequest::STATUS_APPROVED => '承認済み',
+            TimecardUpdateRequest::STATUS_REJECTED => '却下',
+            default => $status
+        };
+    }
+
+    /**
+     * 申請作成フォーム用データ取得
+     */
+    public function getCreateFormData(Timecard $timecard): array
+    {
+        return [
+            'timecard' => $timecard,
+            'formData' => [
+                'date_formatted' => DateHelper::formatJapaneseDateWithYear($timecard->date),
+                'date_iso' => $timecard->date->format('Y-m-d'),
+                'clock_in' => TimeHelper::formatDateTimeToTime($timecard->clock_in),
+                'clock_out' => TimeHelper::formatDateTimeToTime($timecard->clock_out),
+                'break_start' => TimeHelper::formatDateTimeToTime($timecard->break_start),
+                'break_end' => TimeHelper::formatDateTimeToTime($timecard->break_end)
+            ]
+        ];
     }
 
     /**

@@ -28,9 +28,9 @@ class TimecardUpdateRequestController extends Controller
 
     public function create(Timecard $timecard)
     {
-        $user = Auth::user();
-        $formData = TimecardHelper::formatForDisplay($timecard);
-        return view('timecard.update-requests.create', compact('timecard', 'user', 'formData'));
+        return view('timecard.update-requests.create',
+            $this->service->getCreateFormData($timecard)
+        );
     }
 
     public function store(TimecardUpdateRequestRequest $request)

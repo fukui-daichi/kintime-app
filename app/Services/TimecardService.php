@@ -71,22 +71,25 @@ class TimecardService
 
     /**
      * 勤怠データを表示用にフォーマット
+     * @param Timecard|null $timecard 勤怠データ
+     * @param Carbon|null $date 表示する日付（指定がない場合は現在日時）
      */
-    public function timecardData(?Timecard $timecard = null): array
+    public function timecardData(?Timecard $timecard = null, ?Carbon $date = null): array
     {
         if (!$timecard) {
-            $date = now();
+            $date = $date ?? now();
+
             return [
-                'date' => $date->locale('ja')->isoFormat('M月D日（dd）'),
-                'clock_in' => '--:--',
-                'clock_out' => '--:--',
-                'break_time' => '--:--',
-                'work_time' => '--:--',
-                'overtime' => '--:--',
-                'night_work' => '--:--',
-                'status' => '未打刻',
-                'day_class' => $date->dayOfWeek === 0 ? 'bg-weekend-sun' :
-                             ($date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
+            'date' => DateHelper::formatJapaneseDateWithoutYear($date),
+            'clock_in' => '--:--',
+            'clock_out' => '--:--',
+            'break_time' => '--:--',
+            'work_time' => '--:--',
+            'overtime' => '--:--',
+            'night_work' => '--:--',
+            'status' => '--',
+            'day_class' => $date->dayOfWeek === 0 ? 'bg-weekend-sun' :
+                         ($date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
             ];
         }
 
@@ -97,14 +100,12 @@ class TimecardService
             'clock_in' => TimeHelper::formatDateTimeToTime($timecard->clock_in),
             'clock_out' => TimeHelper::formatDateTimeToTime($timecard->clock_out),
             'break_time' => TimeHelper::formatMinutesToTime(
-                $timecard->break_start && $timecard->break_end
-                ? $timecard->break_start->diffInMinutes($timecard->break_end)
-                : 0
+                TimeHelper::calculateBreakMinutes($timecard)
             ),
             'work_time' => TimeHelper::formatMinutesToTime(TimeHelper::calculateWorkMinutes($timecard)),
-            'date' => $timecard->date->locale('ja')->isoFormat('M月D日（dd）'),
-            'day_class' => $timecard->date->dayOfWeek === 0 ? 'bg-weekend-sun' :
-                         ($timecard->date->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
+            'date' => ($timecard->date ?? now())->locale('ja')->isoFormat('M月D日（dd）'),
+            'day_class' => ($timecard->date ?? now())->dayOfWeek === 0 ? 'bg-weekend-sun' :
+                         (($timecard->date ?? now())->dayOfWeek === 6 ? 'bg-weekend-sat' : ''),
             'status' => $this->getTimecardStatusLabel($timecard)
         ];
     }
@@ -124,22 +125,6 @@ class TimecardService
             return '勤務中';
         }
         return '未打刻';
-    }
-
-    /**
-     * タイムカード編集用データをフォーマット
-     */
-    public function timecardEditData(Timecard $timecard): array
-    {
-        return [
-            'id' => $timecard->id,
-            'clock_in' => $timecard->clock_in ? $timecard->clock_in->format('H:i') : null,
-            'clock_out' => $timecard->clock_out ? $timecard->clock_out->format('H:i') : null,
-            'break_start' => $timecard->break_start ? $timecard->break_start->format('H:i') : null,
-            'break_end' => $timecard->break_end ? $timecard->break_end->format('H:i') : null,
-            'date_formatted' => DateHelper::formatJapaneseDateWithoutYear($timecard->date),
-            'date_iso' => $timecard->date->format('Y-m-d')
-        ];
     }
 
     protected function getSystemStatistics(): array
@@ -200,7 +185,7 @@ class TimecardService
                 $result[] = $this->timecardData($timecards[$md]);
             } else {
                 $date = Carbon::createFromFormat('Y-m-d', $year . '-' . $md);
-                $result[] = $this->timecardData(null);
+                $result[] = $this->timecardData(null, $date);
             }
         }
         return collect($result);
@@ -218,6 +203,22 @@ class TimecardService
         });
 
         return $timecards;
+    }
+
+    /**
+     * タイムカード編集用データをフォーマット
+     */
+    public function timecardEditData(Timecard $timecard): array
+    {
+        return [
+            'id' => $timecard->id,
+            'clock_in' => TimeHelper::formatDateTimeToTime($timecard->clock_in, 'H:i'),
+            'clock_out' => TimeHelper::formatDateTimeToTime($timecard->clock_out, 'H:i'),
+            'break_start' => TimeHelper::formatDateTimeToTime($timecard->break_start, 'H:i'),
+            'break_end' => TimeHelper::formatDateTimeToTime($timecard->break_end, 'H:i'),
+            'date_formatted' => DateHelper::formatJapaneseDateWithYear($timecard->date),
+            'date_iso' => $timecard->date->format('Y-m-d')
+        ];
     }
 
     /**

@@ -46,9 +46,12 @@ class TimeHelper
     /**
      * DateTimeオブジェクトを指定フォーマットの文字列に変換 (nullの場合は'--:--')
      */
-    public static function formatDateTimeToTime(?\DateTime $time, string $format = 'H:i'): string
+    public static function formatDateTimeToTime($datetime, string $format = 'H:i'): string
     {
-        return $time ? $time->format($format) : '--:--';
+        if ($datetime instanceof \DateTime) {
+            return $datetime->format($format);
+        }
+        return $datetime ? date($format, strtotime($datetime)) : '--:--';
     }
 
     // =============================================
@@ -123,6 +126,16 @@ class TimeHelper
         }
 
         return max($nightMinutes, 0);
+    }
+
+    /**
+     * 休憩時間を分数で計算
+     */
+    public static function calculateBreakMinutes(Timecard $timecard): int
+    {
+        return $timecard->break_start && $timecard->break_end
+            ? $timecard->break_start->diffInMinutes($timecard->break_end)
+            : 0;
     }
 
     /**
