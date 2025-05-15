@@ -67,10 +67,24 @@ class TimeHelper
             return 0;
         }
 
-        $minutes = $timecard->clock_in->diffInMinutes($timecard->clock_out);
+        $clockIn = Carbon::parse($timecard->clock_in);
+        $clockOut = Carbon::parse($timecard->clock_out);
+
+        // 日を跨いだ場合の考慮
+        if ($clockOut->lt($clockIn)) {
+            $clockOut->addDay();
+        }
+
+        $minutes = $clockIn->diffInMinutes($clockOut);
 
         if ($timecard->break_start && $timecard->break_end) {
-            $minutes -= $timecard->break_start->diffInMinutes($timecard->break_end);
+            $breakStart = Carbon::parse($timecard->break_start);
+            $breakEnd = Carbon::parse($timecard->break_end);
+
+            if ($breakEnd->lt($breakStart)) {
+                $breakEnd->addDay();
+            }
+            $minutes -= $breakStart->diffInMinutes($breakEnd);
         }
 
         return $minutes;
@@ -81,14 +95,10 @@ class TimeHelper
      */
     public static function calculateOvertimeMinutes(Timecard $timecard): array
     {
-        $totalMinutes = $timecard->clock_in->diffInMinutes($timecard->clock_out);
+        $totalMinutes = self::calculateWorkMinutes($timecard) + ($timecard->break_start && $timecard->break_end ?
+            Carbon::parse($timecard->break_start)->diffInMinutes(Carbon::parse($timecard->break_end)) : 0);
 
-        $breakMinutes = 0;
-        if ($timecard->break_start && $timecard->break_end) {
-            $breakMinutes = $timecard->break_start->diffInMinutes($timecard->break_end);
-        }
-
-        $overtimeMinutes = $totalMinutes - $breakMinutes - (WorkTimeConstants::DEFAULT_WORK_HOURS * 60);
+        $overtimeMinutes = $totalMinutes - (WorkTimeConstants::DEFAULT_WORK_HOURS * 60);
         $nightMinutes = self::calculateNightWorkMinutes($timecard);
 
         return [
@@ -102,30 +112,55 @@ class TimeHelper
      */
     public static function calculateNightWorkMinutes(Timecard $timecard): int
     {
-        $nightStart = Carbon::parse($timecard->date)->setHour(WorkTimeConstants::NIGHT_START_HOUR);
-        $nightEnd = Carbon::parse($timecard->date)->addDay()->setHour(WorkTimeConstants::NIGHT_END_HOUR);
-
         $clockIn = Carbon::parse($timecard->clock_in);
         $clockOut = Carbon::parse($timecard->clock_out);
 
-        $nightStart = max($nightStart, $clockIn);
-        $nightEnd = min($nightEnd, $clockOut);
+        // 日を跨いだ場合の考慮
+        if ($clockOut->lt($clockIn)) {
+            $clockOut->addDay();
+        }
 
-        $nightMinutes = $nightStart < $nightEnd ? $nightStart->diffInMinutes($nightEnd) : 0;
+        $nightMinutes = self::calculateNightMinutes($clockIn, $clockOut);
 
+        // 休憩時間を考慮
         if ($timecard->break_start && $timecard->break_end) {
             $breakStart = Carbon::parse($timecard->break_start);
             $breakEnd = Carbon::parse($timecard->break_end);
 
-            $breakNightStart = max($nightStart, $breakStart);
-            $breakNightEnd = min($nightEnd, $breakEnd);
-
-            if ($breakNightStart < $breakNightEnd) {
-                $nightMinutes -= $breakNightStart->diffInMinutes($breakNightEnd);
+            if ($breakEnd->lt($breakStart)) {
+                $breakEnd->addDay();
             }
+
+            $nightMinutes -= self::calculateNightMinutes($breakStart, $breakEnd);
         }
 
         return max($nightMinutes, 0);
+    }
+
+    /**
+     * 指定期間内の深夜時間帯(22:00-05:00)の分数を計算
+     */
+    private static function calculateNightMinutes(Carbon $start, Carbon $end): int
+    {
+        $nightMinutes = 0;
+        $current = $start->copy();
+
+        while ($current < $end) {
+            $periodStart = $current->copy()->setHour(WorkTimeConstants::NIGHT_START_HOUR)->setMinute(0);
+            $periodEnd = $current->copy()->addDay()->setHour(WorkTimeConstants::NIGHT_END_HOUR)->setMinute(0);
+
+            $windowStart = max($current, $periodStart);
+            $windowEnd = min($end, $periodEnd);
+
+            if ($windowStart < $windowEnd) {
+                $nightMinutes += $windowStart->diffInMinutes($windowEnd);
+            }
+
+            // 翌日0時へ移動
+            $current = $current->copy()->addDay()->setHour(0)->setMinute(0);
+        }
+
+        return $nightMinutes;
     }
 
     /**
