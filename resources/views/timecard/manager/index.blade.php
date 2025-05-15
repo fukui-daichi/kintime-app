@@ -55,11 +55,7 @@
                                                 @if($timecard['can_apply'])
                                                     <x-primary-button
                                                         tag="a"
-                                                        href="{{ route('timecard.edit', [
-                                                            'timecard' => $timecard['id'],
-                                                            'year' => $year,
-                                                            'month' => $month
-                                                        ]) }}"
+                                                        href="{{ route('timecard.edit', $timecard['id']) }}"
                                                         class="text-sm">
                                                         編集
                                                     </x-primary-button>

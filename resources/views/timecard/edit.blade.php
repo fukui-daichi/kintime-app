@@ -17,9 +17,6 @@
                             @csrf
                             @method('PUT')
 
-                            <input type="hidden" name="year" value="{{ $year }}">
-                            <input type="hidden" name="month" value="{{ $month }}">
-
                             <div>
                                 <x-input-label for="date_formatted" :value="__('日付')" />
                                 <x-text-input id="date_formatted" type="text" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700"

@@ -224,13 +224,13 @@ class TimecardService
     /**
      * タイムカード編集用データを取得
      */
-    public function getTimecardEditData(Timecard $timecard, Request $request): array
+    public function getTimecardEditData(Timecard $timecard): array
     {
         return [
             'timecard' => $this->timecardEditData($timecard),
             'user' => $timecard->user,
-            'year' => $request->input('year', now()->year),
-            'month' => $request->input('month', now()->month),
+            'year' => $timecard->date->year,
+            'month' => $timecard->date->month,
             'yearOptions' => DateHelper::getYearOptions(
                 min($this->repository->getAvailableYears($timecard->user_id)),
                 max($this->repository->getAvailableYears($timecard->user_id))

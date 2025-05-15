@@ -101,7 +101,7 @@ class TimecardController extends Controller
         }
 
         return view('timecard.edit',
-            $this->timecardService->getTimecardEditData($timecard, request())
+            $this->timecardService->getTimecardEditData($timecard)
         );
     }
 
@@ -120,8 +120,8 @@ class TimecardController extends Controller
         // TODO: バリデーションと更新処理を実装
         return redirect()
             ->route('timecard.index', [
-                'year' => $request->input('year'),
-                'month' => $request->input('month')
+                'year' => $timecard->date->year,
+                'month' => $timecard->date->month
             ])
             ->with('status', '勤怠情報を更新しました');
     }
