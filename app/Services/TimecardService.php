@@ -53,8 +53,8 @@ class TimecardService
         return array_merge($baseData, [
             'timecardButtonStatus' => $this->getStampButtonStatuses($baseData['user']->id),
             'timecard' => $timecard ? $this->timecardData($timecard) : null,
-            'pendingRequests' => app(TimecardUpdateRequestService::class)
-                ->getPendingRequestsForDashboard($baseData['user']->id)
+            'departmentMemberRequests' => app(TimecardUpdateRequestService::class)
+                ->getDepartmentMemberRequests($baseData['user']->id)
         ]);
     }
 

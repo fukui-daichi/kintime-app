@@ -54,6 +54,28 @@ class TimecardUpdateRequestService
     }
 
     /**
+     * 部署メンバーの未承認申請を取得
+     * @param int $managerId マネージャーID
+     * @param int $limit 取得件数
+     * @return array フォーマット済み申請データ
+     */
+    public function getDepartmentMemberRequests(int $managerId, int $limit = 5)
+    {
+        $manager = User::findOrFail($managerId);
+        $requests = $this->repository
+            ->getPendingRequestsByDepartment($manager->department_id, $limit);
+
+        return $requests->map(function($request) {
+            return [
+                'user_name' => $request->user->getFullNameAttribute(),
+                'created_at' => DateHelper::formatJapaneseDateWithoutYear($request->created_at),
+                'status' => $this->getStatusLabel($request->status),
+                'reason' => $request->reason
+            ];
+        })->toArray();
+    }
+
+    /**
      * 申請作成フォーム用データ取得
      */
     /**

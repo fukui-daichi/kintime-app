@@ -79,33 +79,33 @@
 
         <!-- 申請セクション -->
         <div class="grid grid-cols-2 gap-4 mb-4">
-          <!-- 打刻修正申請 -->
+          <!-- 部署メンバーの申請 -->
           <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">
-            <h3 class="text-lg font-semibold mb-2 dark:text-white">打刻修正申請</h3>
-            <div class="space-y-2">
-              @forelse($pendingRequests as $request)
-                <div class="flex justify-between items-center">
-                  <div>
-                    <div class="font-medium dark:text-white">{{ $request['created_at'] }}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $request['status'] }}</div>
+              <h3 class="text-lg font-semibold mb-2 dark:text-white">部署メンバーの申請</h3>
+              <div class="space-y-2">
+                @forelse($departmentMemberRequests as $request)
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <div class="font-medium dark:text-white">{{ $request['user_name'] }} - {{ $request['created_at'] }}</div>
+                      <div class="text-sm text-gray-500 dark:text-gray-400">{{ $request['status'] }}</div>
+                    </div>
+                    <div class="text-right dark:text-white">
+                      <div class="text-sm">{{ Str::limit($request['reason'], 30) }}</div>
+                    </div>
                   </div>
-                  <div class="text-right dark:text-white">
-                    <div class="text-sm">{{ Str::limit($request['reason'], 30) }}</div>
-                  </div>
+                @empty
+                  <div class="text-gray-500 dark:text-gray-400">部署メンバーからの申請はありません</div>
+                @endforelse
+                <div class="text-right">
+                  <x-primary-button
+                      tag="a"
+                      href="{{ route('timecard-update-requests.index') }}"
+                      class="text-sm">
+                      一覧を見る
+                  </x-primary-button>
                 </div>
-              @empty
-                <div class="text-gray-500 dark:text-gray-400">現在、打刻修正申請はありません</div>
-              @endforelse
-              <div class="text-right">
-                <x-primary-button
-                    tag="a"
-                    href="{{ route('timecard-update-requests.index') }}"
-                    class="text-sm">
-                    一覧を見る
-                </x-primary-button>
               </div>
             </div>
-          </div>
 
           <!-- 有給休暇申請 -->
           <div class="border border-gray-200 rounded-lg dark:border-gray-600 p-4 bg-white dark:bg-gray-800">

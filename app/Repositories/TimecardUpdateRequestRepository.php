@@ -45,4 +45,20 @@ class TimecardUpdateRequestRepository
     {
         return $request->update($data);
     }
+
+    /**
+     * 部署ごとの未承認申請を取得
+     */
+    public function getPendingRequestsByDepartment(int $departmentId, int $limit = 5)
+    {
+        return TimecardUpdateRequest::with(['user', 'timecard'])
+            ->whereHas('user', function($q) use ($departmentId) {
+                $q->where('department_id', $departmentId)
+                  ->where('role', 'user');
+            })
+            ->pending()
+            ->latest()
+            ->limit($limit)
+            ->get();
+    }
 }
