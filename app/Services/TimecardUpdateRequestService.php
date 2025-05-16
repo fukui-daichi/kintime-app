@@ -106,7 +106,7 @@ class TimecardUpdateRequestService
      * @param \Illuminate\Http\Request $request リクエスト
      * @return array 表示用データ配列
      */
-    public function getRequestData(User $user, \Illuminate\Http\Request $request): array
+    public function getUserRequestData(User $user, \Illuminate\Http\Request $request): array
     {
         $year = $request->input('year', now()->year);
         $month = $request->input('month', now()->month);
@@ -117,6 +117,25 @@ class TimecardUpdateRequestService
             'year' => $year,
             'month' => $month,
             'yearOptions' => range(now()->year - 2, now()->year + 1)
+        ];
+    }
+
+    public function getApprovalRequestData(User $user): array
+    {
+        $requests = $this->repository->getPendingRequestsByDepartment($user->department_id)
+            ->map(function ($request) {
+                return [
+                    'id' => $request->id,
+                    'user_name' => $request->user->getFullNameAttribute(),
+                    'date' => DateHelper::formatJapaneseDateWithoutYear($request->created_at),
+                    'status' => $this->getStatusLabel($request->status),
+                    'reason' => $request->reason
+                ];
+            });
+
+        return [
+            'requests' => $requests,
+            'userType' => $user->getUserType()
         ];
     }
 

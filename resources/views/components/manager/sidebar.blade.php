@@ -83,9 +83,9 @@
         <ul id="dropdown-pages" class="py-2 space-y-2">
             <li>
             <a
-                href="{{ route('timecard-update-requests.index') }}"
+                href="{{ route('timecard-approval-requests.index') }}"
                 class="flex items-center p-2 pl-11 w-full text-base font-medium rounded-lg transition duration-75 group
-                    {{ request()->routeIs('timecard-update-requests.index') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white' }}"
+                    {{ request()->routeIs('timecard-approval-requests.index') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white' }}"
                 >勤怠修正
                 <span class="ml-auto inline-flex justify-center items-center w-5 h-5 text-xs font-semibold rounded-full text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-900">
                     0

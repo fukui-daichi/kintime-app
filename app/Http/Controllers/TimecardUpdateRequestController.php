@@ -19,10 +19,27 @@ class TimecardUpdateRequestController extends Controller
         $this->service = $service;
     }
 
-    public function index(Request $request)
+    public function userIndex(Request $request)
     {
+        $user = $request->user();
+        if (!$user->isUser()) {
+            abort(403);
+        }
+
         return view('timecard.update-requests.index',
-            $this->service->getRequestData(Auth::user(), $request)
+            $this->service->getUserRequestData($user, $request)
+        );
+    }
+
+    public function approvalIndex(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->isManager() && !$user->isAdmin()) {
+            abort(403);
+        }
+
+        return view('timecard.approval-requests.index',
+            $this->service->getApprovalRequestData($user)
         );
     }
 

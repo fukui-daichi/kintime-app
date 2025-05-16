@@ -34,11 +34,17 @@ Route::middleware('auth')->group(function () {
         Route::put('/{timecard}', [TimecardController::class, 'update'])->name('timecard.update');
 
         // 打刻修正申請
+        // ユーザー用申請ルート
         Route::prefix('update-requests')->name('timecard-update-requests.')->group(function () {
-            Route::get('/', [TimecardUpdateRequestController::class, 'index'])->name('index');
+            Route::get('/', [TimecardUpdateRequestController::class, 'userIndex'])->name('index');
             Route::get('/create/{timecard}', [TimecardUpdateRequestController::class, 'create'])->name('create');
             Route::post('/', [TimecardUpdateRequestController::class, 'store'])->name('store');
             Route::get('/{id}', [TimecardUpdateRequestController::class, 'show'])->name('show');
+        });
+
+        // マネージャー/管理者用承認ルート
+        Route::prefix('approval-requests')->name('timecard-approval-requests.')->group(function () {
+            Route::get('/', [TimecardUpdateRequestController::class, 'approvalIndex'])->name('index');
             Route::post('/{id}/approve', [TimecardUpdateRequestController::class, 'approve'])->name('approve');
         });
     });
